@@ -1,7 +1,6 @@
 import os
 import subprocess
 import discord
-from playwright.async_api import async_playwright
 from discord import app_commands
 from openai import OpenAI
 
@@ -105,10 +104,7 @@ Slots change quickly — check the booking page before travelling.
         await interaction.followup.send(f"❌ Error:\n```{shorten_error(e)}```")
 
 
-@client.tree.command(
-    name="checkslot",
-    description="Check a booking page for possible football pitch slots",
-)
+
 async def checkslot(interaction: discord.Interaction, url: str, time: str = "8pm"):
     await interaction.response.defer()
 
@@ -264,10 +260,7 @@ Format:
         await interaction.followup.send(f"❌ Error:\n```{shorten_error(e)}```")
 
 
-@client.tree.command(
-    name="powerleague",
-    description="Check Powerleague pitch availability",
-)
+
 async def powerleague(interaction: discord.Interaction, venue: str = "shepherds bush"):
     await interaction.response.defer()
 
