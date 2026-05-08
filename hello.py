@@ -24,6 +24,7 @@ class ZFindBot(discord.Client):
 
 client = ZFindBot()
 
+GAMES_CHANNEL_ID = YOUR_CHANNEL_ID_HERE
 
 def shorten_error(e):
     error_text = str(e)
