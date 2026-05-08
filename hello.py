@@ -24,7 +24,7 @@ class ZFindBot(discord.Client):
 
 client = ZFindBot()
 
-GAMES_CHANNEL_ID = 123
+GAMES_CHANNEL_ID = 1502022033851158638
 
 def shorten_error(e):
     error_text = str(e)
@@ -207,8 +207,10 @@ async def game(
     embed.add_field(name="🏟️ Surface", value=surface, inline=True)
     embed.set_footer(text=f"Posted by {interaction.user}")
 
-    channel = client.get_channel(GAMES_CHANNEL_ID)
+channel = client.get_channel(GAMES_CHANNEL_ID)
 
+print("CHANNEL:", channel)
+print("CHANNEL ID:", GAMES_CHANNEL_ID)
     if channel is None:
         await interaction.followup.send("❌ Could not find games channel.")
         return
