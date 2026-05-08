@@ -1,8 +1,11 @@
 import os
+import subprocess
 import discord
 from playwright.async_api import async_playwright
 from discord import app_commands
 from openai import OpenAI
+
+subprocess.run(["python", "-m", "playwright", "install", "chromium"], check=False)
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
