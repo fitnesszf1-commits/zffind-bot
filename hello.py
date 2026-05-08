@@ -1,0 +1,305 @@
+import os
+import discord
+from playwright.async_api import async_playwright
+from discord import app_commands
+from openai import OpenAI
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
+
+ai = OpenAI(api_key=OPENAI_API_KEY)
+
+
+class ZFindBot(discord.Client):
+    def __init__(self):
+        intents = discord.Intents.default()
+        super().__init__(intents=intents)
+        self.tree = app_commands.CommandTree(self)
+
+    async def setup_hook(self):
+        await self.tree.sync()
+
+
+client = ZFindBot()
+
+
+def shorten_error(e):
+    error_text = str(e)
+    if len(error_text) > 1500:
+        error_text = error_text[:1500] + "..."
+    return error_text
+
+
+@client.event
+async def on_ready():
+    print(f"Logged in as {client.user}")
+
+
+@client.tree.command(name="pitch", description="AI search for London football pitches")
+async def pitch(
+    interaction: discord.Interaction,
+    area: str,
+    day: str = "tonight",
+    time: str = "7pm",
+    pitch_type: str = "5-a-side",
+):
+    await interaction.response.defer()
+
+    prompt = f"""
+You are ZFind, a London football pitch finder inside Discord.
+
+User request:
+- Area: {area}, London
+- Day: {day}
+- Time: around {time}
+- Pitch type: {pitch_type}
+
+Search the web for real football pitches and booking pages.
+
+Use sources like:
+Playfinder, Powerleague, Goals, Better/GLL, PlayFootball, local council pages.
+
+Rules:
+- Do not invent confirmed availability.
+- Include phone number if publicly available.
+- Keep it short.
+- Use Discord-friendly formatting.
+- Maximum 5 results.
+
+Format exactly like this:
+
+⚽ **ZFind Results**
+📍 Area: ...
+🕒 Time: ...
+🏟️ Type: ...
+
+1️⃣ **Venue Name**
+📍 Area
+💷 Price
+📞 Phone Number
+✅ Status: ⚠️ Check live calendar
+🔗 Booking: link
+
+End with:
+Slots change quickly — check the booking page before travelling.
+"""
+
+    try:
+        response = ai.responses.create(
+            model="gpt-4.1-mini",
+            tools=[{"type": "web_search_preview"}],
+            input=prompt,
+        )
+
+        answer = response.output_text
+
+        if len(answer) > 1900:
+            answer = answer[:1900]
+
+        await interaction.followup.send(f"⚽ **ZFind AI Pitch Search**\n\n{answer}")
+
+    except Exception as e:
+        await interaction.followup.send(f"❌ Error:\n```{shorten_error(e)}```")
+
+
+@client.tree.command(
+    name="checkslot",
+    description="Check a booking page for possible football pitch slots",
+)
+async def checkslot(interaction: discord.Interaction, url: str, time: str = "8pm"):
+    await interaction.response.defer()
+
+    try:
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(
+                headless=True,
+                args=["--no-sandbox"],
+            )
+
+            page = await browser.new_page()
+            await page.goto(url, wait_until="domcontentloaded", timeout=20000)
+            await page.wait_for_timeout(3000)
+
+            page_text = await page.inner_text("body")
+            await browser.close()
+
+        time_lower = time.lower()
+        page_lower = page_text.lower()
+
+        booking_words = [
+            "available",
+            "book now",
+            "select",
+            "reserve",
+            "slots",
+            "availability",
+            "choose a time",
+            "add to basket",
+        ]
+
+        found_time = time_lower in page_lower
+        found_booking_words = any(word in page_lower for word in booking_words)
+
+        if found_time and found_booking_words:
+            message = f"""
+✅ **Possible slot found**
+
+🕒 Time searched: **{time}**
+🔗 Page: {url}
+
+I found the time and booking/availability words on this page.
+Open the page to confirm before booking.
+"""
+        elif found_booking_words:
+            message = f"""
+⚠️ **Booking page found**
+
+🕒 Time searched: **{time}**
+🔗 Page: {url}
+
+I found booking/availability text, but could not confirm the exact time.
+"""
+        else:
+            message = f"""
+❌ **No clear slot found**
+
+🕒 Time searched: **{time}**
+🔗 Page: {url}
+
+I could not detect availability from this page.
+"""
+
+        await interaction.followup.send(message)
+
+    except Exception as e:
+        await interaction.followup.send(f"❌ Error:\n```{shorten_error(e)}```")
+
+
+@client.tree.command(name="game", description="Post a football game needing players")
+async def game(
+    interaction: discord.Interaction,
+    area: str,
+    time: str,
+    players_needed: int,
+    cost: int,
+    level: str,
+    surface: str,
+):
+    message = f"""
+⚽ **GAME POSTED**
+
+📍 Area: **{area}**
+🕒 Time: **{time}**
+👥 Players Needed: **{players_needed}**
+💷 Cost: **£{cost}**
+🔥 Level: **{level}**
+🏟️ Surface: **{surface}**
+
+React with ⚽ if interested.
+"""
+
+    await interaction.response.send_message(message)
+
+
+@client.tree.command(
+    name="freepitch",
+    description="Find free football cages and open-access pitches",
+)
+async def freepitch(interaction: discord.Interaction, area: str):
+    await interaction.response.defer()
+
+    prompt = f"""
+You are ZFind.
+
+Search for free football cages, MUGAs, public astros,
+park football pitches, and open-access football spots in:
+
+{area}, London.
+
+Include:
+- location name
+- surface type
+- whether lights are likely available
+- if it is usually busy
+- nearest area/station if possible
+
+Keep it short and Discord-friendly.
+
+Format:
+
+⚽ Free Football Spots
+
+1️⃣ Spot Name
+📍 Area
+🏟️ Surface
+💡 Lights: Yes/No/Unknown
+👥 Usually Busy: Yes/No
+"""
+
+    try:
+        response = ai.responses.create(
+            model="gpt-4.1-mini",
+            tools=[{"type": "web_search_preview"}],
+            input=prompt,
+        )
+
+        answer = response.output_text
+
+        if len(answer) > 1900:
+            answer = answer[:1900]
+
+        await interaction.followup.send(answer)
+
+    except Exception as e:
+        await interaction.followup.send(f"❌ Error:\n```{shorten_error(e)}```")
+
+
+@client.tree.command(
+    name="powerleague",
+    description="Check Powerleague pitch availability",
+)
+async def powerleague(interaction: discord.Interaction, venue: str = "shepherds bush"):
+    await interaction.response.defer()
+
+    search_url = "https://www.powerleague.com/football-pitch-hire"
+
+    try:
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(
+                headless=True,
+                args=["--no-sandbox"],
+            )
+
+            page = await browser.new_page()
+            await page.goto(search_url, wait_until="domcontentloaded", timeout=20000)
+            await page.wait_for_timeout(5000)
+
+            page_text = await page.inner_text("body")
+            await browser.close()
+
+        if venue.lower() in page_text.lower():
+            message = f"""
+⚽ **Powerleague Check**
+
+📍 Venue searched: **{venue}**
+✅ Powerleague venue page loaded
+⚠️ Next step: connect to its booking calendar
+
+Use the Powerleague booking page to confirm live slots.
+"""
+        else:
+            message = f"""
+⚽ **Powerleague Check**
+
+📍 Venue searched: **{venue}**
+⚠️ I loaded Powerleague, but could not confirm this venue from the page text.
+Try a different venue name.
+"""
+
+        await interaction.followup.send(message)
+
+    except Exception as e:
+        await interaction.followup.send(f"❌ Error:\n```{shorten_error(e)}```")
+
+
+client.run(DISCORD_TOKEN)
