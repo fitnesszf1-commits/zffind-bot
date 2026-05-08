@@ -24,7 +24,7 @@ class ZFindBot(discord.Client):
 
 client = ZFindBot()
 
-GAMES_CHANNEL_ID = YOUR_CHANNEL_ID_HERE
+GAMES_CHANNEL_ID = 123
 
 def shorten_error(e):
     error_text = str(e)
@@ -192,35 +192,29 @@ async def game(
     level: str,
     surface: str,
 ):
+    await interaction.response.defer(ephemeral=True)
+
     embed = discord.Embed(
         title="⚽ GAME NEEDING PLAYERS",
         description=f"📍 **{area}**",
-        color=0x00ff88
+        color=0x00FF88
     )
 
     embed.add_field(name="🕒 Time", value=time, inline=True)
     embed.add_field(name="👥 Players Needed", value=str(players_needed), inline=True)
     embed.add_field(name="💷 Cost", value=f"£{cost}", inline=True)
-
     embed.add_field(name="🔥 Level", value=level, inline=True)
     embed.add_field(name="🏟️ Surface", value=surface, inline=True)
-
     embed.set_footer(text=f"Posted by {interaction.user}")
 
     channel = client.get_channel(GAMES_CHANNEL_ID)
 
-    if channel:
-        await channel.send(embed=embed)
+    if channel is None:
+        await interaction.followup.send("❌ Could not find games channel.")
+        return
 
-        await interaction.response.send_message(
-            "✅ Game posted in 🔥｜games-tonight",
-            ephemeral=True
-        )
-    else:
-        await interaction.response.send_message(
-            "❌ Could not find games channel.",
-            ephemeral=True
-        )
+    await channel.send(embed=embed)
+    await interaction.followup.send("✅ Game posted in 🔥｜games-tonight")
     message = f"""
 ⚽ **GAME POSTED**
 
