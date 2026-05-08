@@ -261,7 +261,7 @@ Format:
 async def powerleague(interaction: discord.Interaction, venue: str = "shepherds bush"):
     await interaction.response.defer()
 
-    search_url = "https://www.powerleague.com/football-pitch-hire"
+    search_url = "https://www.powerleague.com/booking/find-location?search_location=London%2C+United+Kingdom&search_lat=51.5074456&search_lng=-0.1277653&search_date=2026-05-08&search_range=&territory_id=263&result_set=Pitch+search&search_sport=&search_size=&search_surface=&search_booking_modifier=&search_disclaimer=Select+your+pitch&search_venue=&action=searchSites"
 
     try:
         async with async_playwright() as p:
