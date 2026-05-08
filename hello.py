@@ -115,9 +115,16 @@ async def checkslot(interaction: discord.Interaction, url: str, time: str = "8pm
     try:
         async with async_playwright() as p:
             browser = await p.chromium.launch(
-                headless=True,
-                args=["--no-sandbox"],
-            )
+    headless=True,
+    args=[
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--single-process",
+        "--no-zygote",
+    ],
+)
 
             page = await browser.new_page()
             await page.goto(url, wait_until="domcontentloaded", timeout=20000)
@@ -269,9 +276,16 @@ async def powerleague(interaction: discord.Interaction, venue: str = "shepherds 
     try:
         async with async_playwright() as p:
             browser = await p.chromium.launch(
-                headless=True,
-                args=["--no-sandbox"],
-            )
+    headless=True,
+    args=[
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--single-process",
+        "--no-zygote",
+    ],
+)
 
             page = await browser.new_page()
             await page.goto(search_url, wait_until="domcontentloaded", timeout=20000)
