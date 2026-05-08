@@ -205,18 +205,25 @@ async def game(
     embed.add_field(name="💷 Cost", value=f"£{cost}", inline=True)
     embed.add_field(name="🔥 Level", value=level, inline=True)
     embed.add_field(name="🏟️ Surface", value=surface, inline=True)
+
     embed.set_footer(text=f"Posted by {interaction.user}")
 
-channel = client.get_channel(GAMES_CHANNEL_ID)
+    channel = client.get_channel(GAMES_CHANNEL_ID)
 
-print("CHANNEL:", channel)
-print("CHANNEL ID:", GAMES_CHANNEL_ID)
+    print("CHANNEL:", channel)
+    print("CHANNEL ID:", GAMES_CHANNEL_ID)
+
     if channel is None:
-        await interaction.followup.send("❌ Could not find games channel.")
+        await interaction.followup.send(
+            "❌ Could not find games channel."
+        )
         return
 
     await channel.send(embed=embed)
-    await interaction.followup.send("✅ Game posted in 🔥｜games-tonight")
+
+    await interaction.followup.send(
+        "✅ Game posted in 🔥｜games-tonight"
+    )
     message = f"""
 ⚽ **GAME POSTED**
 
