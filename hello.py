@@ -110,7 +110,26 @@ powerleague_results = [{
     "times": "Open live calendar",
     "link": f"https://www.powerleague.com/booking/find-location?search_location={area}&territory_id=263&result_set=Pitch+search&search_disclaimer=Select+your+pitch&action=searchSites"
 }]
+@client.tree.command(name="goals", description="Find Goals football centres")
+async def goals(interaction: discord.Interaction, area: str):
 
+    await interaction.response.defer()
+
+    link = f"https://www.goalsfootball.co.uk/centres?search={area}"
+
+    message = f"""
+⚽ **Goals Pitch Finder**
+
+📍 Area: **{area}**
+
+🔗 Search here:
+{link}
+
+⚠️ Live availability changes quickly.
+Check the Goals booking page directly.
+"""
+
+    await interaction.followup.send(message)
     message = f"""
 ⚽ **ZFind Live Pitch Search**
 
