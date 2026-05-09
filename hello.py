@@ -1,7 +1,6 @@
 import os
 import subprocess
 import discord
-from playwright.async_api import async_playwright
 from discord import app_commands
 from openai import OpenAI
 
@@ -65,10 +64,10 @@ async def check_powerleague(area: str, date: str, time: str):
             )
 
             page = await browser.new_page()
-            await page.goto(search_url, wait_until="domcontentloaded", timeout=30000)
-            await page.wait_for_timeout(5000)
+            await page.goto(search_url, timeout=15000)
+await page.wait_for_timeout(2000)
 
-            page_text = await page.inner_text("body")
+            page_text = await page.locator("body").inner_text(timeout=5000)
             await browser.close()
 
         text = page_text.lower()
@@ -102,7 +101,12 @@ async def pitch(
 ):
     await interaction.response.defer()
 
-    powerleague_results = await check_powerleague(area, date, time)
+    import asyncio
+
+powerleague_results = await asyncio.wait_for(
+    check_powerleague(area, date, time),
+    timeout=20
+)
 
     message = f"""
 ⚽ **ZFind Live Pitch Search**
