@@ -1,13 +1,12 @@
 import os
-import subprocess
 import discord
 from discord import app_commands
 from openai import OpenAI
 
-subprocess.run(["python", "-m", "playwright", "install", "chromium"], check=False)
-
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
+
+GAMES_CHANNEL_ID = 1502022033851158638
 
 ai = OpenAI(api_key=OPENAI_API_KEY)
 
@@ -24,7 +23,6 @@ class ZFindBot(discord.Client):
 
 client = ZFindBot()
 
-GAMES_CHANNEL_ID = 1502022033851158638
 
 def shorten_error(e):
     error_text = str(e)
@@ -37,62 +35,8 @@ def shorten_error(e):
 async def on_ready():
     print(f"Logged in as {client.user}")
 
-async def check_powerleague(area: str, date: str, time: str):
-    search_url = (
-        "https://www.powerleague.com/booking/find-location"
-        f"?search_location={area}"
-        "&territory_id=263"
-        "&result_set=Pitch+search"
-        "&search_disclaimer=Select+your+pitch"
-        "&action=searchSites"
-    )
 
-    results = []
-
-    try:
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(
-                headless=True,
-                args=[
-                    "--no-sandbox",
-                    "--disable-setuid-sandbox",
-                    "--disable-dev-shm-usage",
-                    "--disable-gpu",
-                    "--single-process",
-                    "--no-zygote",
-                ],
-            )
-
-            page = await browser.new_page()
-            await page.goto(search_url, timeout=15000)
-await page.wait_for_timeout(2000)
-
-            page_text = await page.locator("body").inner_text(timeout=5000)
-            await browser.close()
-
-        text = page_text.lower()
-
-        if area.lower() in text or "powerleague" in text:
-            results.append({
-                "provider": "Powerleague",
-                "area": area,
-                "status": "Booking page found",
-                "times": "Live times need deeper calendar step",
-                "link": search_url
-            })
-
-    except Exception as e:
-        results.append({
-            "provider": "Powerleague",
-            "area": area,
-            "status": f"Error: {shorten_error(e)}",
-            "times": "Unavailable",
-            "link": search_url
-        })
-
-    return results
-    
-@client.tree.command(name="pitch", description="Check live football pitch availability")
+@client.tree.command(name="pitch", description="Find football pitch booking links")
 async def pitch(
     interaction: discord.Interaction,
     area: str,
@@ -101,18 +45,32 @@ async def pitch(
 ):
     await interaction.response.defer()
 
-    import asyncio
+    powerleague_link = (
+        f"https://www.powerleague.com/booking/find-location?"
+        f"search_location={area}&territory_id=263&result_set=Pitch+search"
+        f"&search_disclaimer=Select+your+pitch&action=searchSites"
+    )
 
-powerleague_results = [{
-    "provider": "Powerleague",
-    "area": area,
-    "status": "Booking page found",
-    "times": "Open live calendar",
-    "link": f"https://www.powerleague.com/booking/find-location?search_location={area}&territory_id=263&result_set=Pitch+search&search_disclaimer=Select+your+pitch&action=searchSites"
-}]
+    message = f"""
+⚽ **ZFind Pitch Search**
+
+📍 Area: **{area}**
+📅 Date: **{date}**
+🕒 Time: **{time}**
+
+🏟️ **Powerleague**
+📡 Status: Booking page found
+🕒 Times: Open live calendar
+🔗 {powerleague_link}
+
+⚠️ Live availability changes quickly. Check the booking page before travelling.
+"""
+
+    await interaction.followup.send(message[:1900])
+
+
 @client.tree.command(name="goals", description="Find Goals football centres")
 async def goals(interaction: discord.Interaction, area: str):
-
     await interaction.response.defer()
 
     link = f"https://www.goalsfootball.co.uk/centres?search={area}"
@@ -125,163 +83,10 @@ async def goals(interaction: discord.Interaction, area: str):
 🔗 Search here:
 {link}
 
-⚠️ Live availability changes quickly.
-Check the Goals booking page directly.
-"""
-
-    await interaction.followup.send(message)
-    message = f"""
-⚽ **ZFind Live Pitch Search**
-
-📍 Area: **{area}**
-📅 Date: **{date}**
-🕒 Time: **{time}**
-
-"""
-
-    for result in powerleague_results:
-        message += f"""
-🏟️ **{result['provider']}**
-📡 Status: {result['status']}
-🕒 Times: {result['times']}
-🔗 {result['link']}
-
+⚠️ Live availability changes quickly. Check the Goals booking page directly.
 """
 
     await interaction.followup.send(message[:1900])
-
-    prompt = f"""
-You are ZFind, a London football pitch finder inside Discord.
-
-User request:
-- Area: {area}, London
-- Day: {day}
-- Time: around {time}
-- Pitch type: {pitch_type}
-
-Search the web for real football pitches and booking pages.
-
-Use sources like:
-Playfinder, Powerleague, Goals, Better/GLL, PlayFootball, local council pages.
-
-Rules:
-- Do not invent confirmed availability.
-- Include phone number if publicly available.
-- Keep it short.
-- Use Discord-friendly formatting.
-- Maximum 5 results.
-
-Format exactly like this:
-
-⚽ **ZFind Results**
-📍 Area: ...
-🕒 Time: ...
-🏟️ Type: ...
-
-1️⃣ **Venue Name**
-📍 Area
-💷 Price
-📞 Phone Number
-✅ Status: ⚠️ Check live calendar
-🔗 Booking: link
-
-End with:
-Slots change quickly — check the booking page before travelling.
-"""
-
-    try:
-        response = ai.responses.create(
-            model="gpt-4.1-mini",
-            tools=[{"type": "web_search_preview"}],
-            input=prompt,
-        )
-
-        answer = response.output_text
-
-        if len(answer) > 1900:
-            answer = answer[:1900]
-
-        await interaction.followup.send(f"⚽ **ZFind AI Pitch Search**\n\n{answer}")
-
-    except Exception as e:
-        await interaction.followup.send(f"❌ Error:\n```{shorten_error(e)}```")
-
-
-
-async def checkslot(interaction: discord.Interaction, url: str, time: str = "8pm"):
-    await interaction.response.defer()
-
-    try:
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(
-    headless=True,
-    args=[
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu",
-        "--single-process",
-        "--no-zygote",
-    ],
-)
-
-            page = await browser.new_page()
-            await page.goto(url, wait_until="domcontentloaded", timeout=20000)
-            await page.wait_for_timeout(3000)
-
-            page_text = await page.inner_text("body")
-            await browser.close()
-
-        time_lower = time.lower()
-        page_lower = page_text.lower()
-
-        booking_words = [
-            "available",
-            "book now",
-            "select",
-            "reserve",
-            "slots",
-            "availability",
-            "choose a time",
-            "add to basket",
-        ]
-
-        found_time = time_lower in page_lower
-        found_booking_words = any(word in page_lower for word in booking_words)
-
-        if found_time and found_booking_words:
-            message = f"""
-✅ **Possible slot found**
-
-🕒 Time searched: **{time}**
-🔗 Page: {url}
-
-I found the time and booking/availability words on this page.
-Open the page to confirm before booking.
-"""
-        elif found_booking_words:
-            message = f"""
-⚠️ **Booking page found**
-
-🕒 Time searched: **{time}**
-🔗 Page: {url}
-
-I found booking/availability text, but could not confirm the exact time.
-"""
-        else:
-            message = f"""
-❌ **No clear slot found**
-
-🕒 Time searched: **{time}**
-🔗 Page: {url}
-
-I could not detect availability from this page.
-"""
-
-        await interaction.followup.send(message)
-
-    except Exception as e:
-        await interaction.followup.send(f"❌ Error:\n```{shorten_error(e)}```")
 
 
 @client.tree.command(name="game", description="Post a football game needing players")
@@ -299,7 +104,7 @@ async def game(
     embed = discord.Embed(
         title="⚽ GAME NEEDING PLAYERS",
         description=f"📍 **{area}**",
-        color=0x00FF88
+        color=0x00FF88,
     )
 
     embed.add_field(name="🕒 Time", value=time, inline=True)
@@ -307,39 +112,16 @@ async def game(
     embed.add_field(name="💷 Cost", value=f"£{cost}", inline=True)
     embed.add_field(name="🔥 Level", value=level, inline=True)
     embed.add_field(name="🏟️ Surface", value=surface, inline=True)
-
     embed.set_footer(text=f"Posted by {interaction.user}")
 
     channel = client.get_channel(GAMES_CHANNEL_ID)
 
-    print("CHANNEL:", channel)
-    print("CHANNEL ID:", GAMES_CHANNEL_ID)
-
     if channel is None:
-        await interaction.followup.send(
-            "❌ Could not find games channel."
-        )
+        await interaction.followup.send("❌ Could not find games channel.")
         return
 
     await channel.send(embed=embed)
-
-    await interaction.followup.send(
-        "✅ Game posted in 🔥｜games-tonight"
-    )
-    message = f"""
-⚽ **GAME POSTED**
-
-📍 Area: **{area}**
-🕒 Time: **{time}**
-👥 Players Needed: **{players_needed}**
-💷 Cost: **£{cost}**
-🔥 Level: **{level}**
-🏟️ Surface: **{surface}**
-
-React with ⚽ if interested.
-"""
-
-    await interaction.response.send_message(message)
+    await interaction.followup.send("✅ Game posted in 🔥｜games-tonight")
 
 
 @client.tree.command(
@@ -390,58 +172,6 @@ Format:
             answer = answer[:1900]
 
         await interaction.followup.send(answer)
-
-    except Exception as e:
-        await interaction.followup.send(f"❌ Error:\n```{shorten_error(e)}```")
-
-
-
-async def powerleague(interaction: discord.Interaction, venue: str = "shepherds bush"):
-    await interaction.response.defer()
-
-    search_url = "https://www.powerleague.com/booking/find-location?search_location=London%2C+United+Kingdom&search_lat=51.5074456&search_lng=-0.1277653&search_date=2026-05-08&search_range=&territory_id=263&result_set=Pitch+search&search_sport=&search_size=&search_surface=&search_booking_modifier=&search_disclaimer=Select+your+pitch&search_venue=&action=searchSites"
-
-    try:
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(
-    headless=True,
-    args=[
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu",
-        "--single-process",
-        "--no-zygote",
-    ],
-)
-
-            page = await browser.new_page()
-            await page.goto(search_url, wait_until="domcontentloaded", timeout=20000)
-            await page.wait_for_timeout(5000)
-
-            page_text = await page.inner_text("body")
-            await browser.close()
-
-        if venue.lower() in page_text.lower():
-            message = f"""
-⚽ **Powerleague Check**
-
-📍 Venue searched: **{venue}**
-✅ Powerleague venue page loaded
-⚠️ Next step: connect to its booking calendar
-
-Use the Powerleague booking page to confirm live slots.
-"""
-        else:
-            message = f"""
-⚽ **Powerleague Check**
-
-📍 Venue searched: **{venue}**
-⚠️ I loaded Powerleague, but could not confirm this venue from the page text.
-Try a different venue name.
-"""
-
-        await interaction.followup.send(message)
 
     except Exception as e:
         await interaction.followup.send(f"❌ Error:\n```{shorten_error(e)}```")
