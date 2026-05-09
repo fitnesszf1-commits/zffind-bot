@@ -18,8 +18,8 @@ class ZFindBot(discord.Client):
         self.tree = app_commands.CommandTree(self)
 
     async def setup_hook(self):
-    await self.tree.sync()
-    print("Slash commands synced")
+        await self.tree.sync()
+        print("Slash commands synced")
 
 
 client = ZFindBot()
