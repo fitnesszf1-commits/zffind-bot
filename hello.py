@@ -37,16 +37,91 @@ def shorten_error(e):
 async def on_ready():
     print(f"Logged in as {client.user}")
 
+async def check_powerleague(area: str, date: str, time: str):
+    search_url = (
+        "https://www.powerleague.com/booking/find-location"
+        f"?search_location={area}"
+        "&territory_id=263"
+        "&result_set=Pitch+search"
+        "&search_disclaimer=Select+your+pitch"
+        "&action=searchSites"
+    )
 
-@client.tree.command(name="pitch", description="AI search for London football pitches")
+    results = []
+
+    try:
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(
+                headless=True,
+                args=[
+                    "--no-sandbox",
+                    "--disable-setuid-sandbox",
+                    "--disable-dev-shm-usage",
+                    "--disable-gpu",
+                    "--single-process",
+                    "--no-zygote",
+                ],
+            )
+
+            page = await browser.new_page()
+            await page.goto(search_url, wait_until="domcontentloaded", timeout=30000)
+            await page.wait_for_timeout(5000)
+
+            page_text = await page.inner_text("body")
+            await browser.close()
+
+        text = page_text.lower()
+
+        if area.lower() in text or "powerleague" in text:
+            results.append({
+                "provider": "Powerleague",
+                "area": area,
+                "status": "Booking page found",
+                "times": "Live times need deeper calendar step",
+                "link": search_url
+            })
+
+    except Exception as e:
+        results.append({
+            "provider": "Powerleague",
+            "area": area,
+            "status": f"Error: {shorten_error(e)}",
+            "times": "Unavailable",
+            "link": search_url
+        })
+
+    return results
+    
+@client.tree.command(name="pitch", description="Check live football pitch availability")
 async def pitch(
     interaction: discord.Interaction,
     area: str,
-    day: str = "tonight",
-    time: str = "7pm",
-    pitch_type: str = "5-a-side",
+    date: str = "today",
+    time: str = "8pm",
 ):
     await interaction.response.defer()
+
+    powerleague_results = await check_powerleague(area, date, time)
+
+    message = f"""
+⚽ **ZFind Live Pitch Search**
+
+📍 Area: **{area}**
+📅 Date: **{date}**
+🕒 Time: **{time}**
+
+"""
+
+    for result in powerleague_results:
+        message += f"""
+🏟️ **{result['provider']}**
+📡 Status: {result['status']}
+🕒 Times: {result['times']}
+🔗 {result['link']}
+
+"""
+
+    await interaction.followup.send(message[:1900])
 
     prompt = f"""
 You are ZFind, a London football pitch finder inside Discord.
