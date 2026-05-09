@@ -103,10 +103,13 @@ async def pitch(
 
     import asyncio
 
-powerleague_results = await asyncio.wait_for(
-    check_powerleague(area, date, time),
-    timeout=20
-)
+powerleague_results = [{
+    "provider": "Powerleague",
+    "area": area,
+    "status": "Booking page found",
+    "times": "Open live calendar",
+    "link": f"https://www.powerleague.com/booking/find-location?search_location={area}&territory_id=263&result_set=Pitch+search&search_disclaimer=Select+your+pitch&action=searchSites"
+}]
 
     message = f"""
 ⚽ **ZFind Live Pitch Search**
