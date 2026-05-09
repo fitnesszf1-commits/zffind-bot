@@ -7,6 +7,58 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 
 GAMES_CHANNEL_ID = 1502022033851158638
+POWERLEAGUE_VENUES = {
+    "shoreditch": {
+        "name": "Powerleague Shoreditch",
+        "id": "a20a54a1-3bdd-57b8-e211-6f44da11e82f",
+        "formats": ["5-a-side Football", "7-a-side Football"],
+    },
+    "southwark": {
+        "name": "Powerleague Southwark",
+        "id": "4f9d2f19-3d3c-11ef-943e-6045bd0f4951",
+        "formats": ["5-a-side Football"],
+    },
+    "shepherds bush": {
+        "name": "Powerleague Shepherd's Bush",
+        "id": "ab9b7a16-b3fc-2b90-8214-69ba3020d23c",
+        "formats": ["5-a-side Football"],
+    },
+    "harrow": {
+        "name": "Powerleague Harrow",
+        "id": "ac1c8e58-0f26-c6b9-6214-1e8fc029ef3a",
+        "formats": ["5-a-side Football"],
+    },
+    "battersea": {
+        "name": "Powerleague Battersea",
+        "id": "dcce87d1-c60a-d5a5-3814-3fa0b007c0b1",
+        "formats": ["5-a-side Football", "7-a-side Football"],
+    },
+    "vauxhall": {
+        "name": "Powerleague Vauxhall",
+        "id": "e5bf4727-e258-bf85-ef13-714728d4ba74",
+        "formats": ["5-a-side Football", "7-a-side Football"],
+    },
+    "fairlop": {
+        "name": "Powerleague Fairlop",
+        "id": "cb58ea55-6dec-d1bd-e211-ee5818802d19",
+        "formats": ["5-a-side Football", "6-a-side Football", "7-a-side Football"],
+    },
+    "barnet": {
+        "name": "Powerleague Barnet",
+        "id": "f43ae0e2-58fb-11b8-e211-712e3ec94836",
+        "formats": ["5-a-side Football", "7-a-side Football"],
+    },
+    "romford": {
+        "name": "Powerleague Romford",
+        "id": "a21f6d63-4043-a38a-8214-65baa0218977",
+        "formats": ["5-a-side Football", "7-a-side Football"],
+    },
+    "croydon": {
+        "name": "Powerleague Croydon",
+        "id": "9a1b8d33-91e7-d88e-e211-0f5fe2796d5c",
+        "formats": ["5-a-side Football", "7-a-side Football"],
+    },
+}
 
 ai = OpenAI(api_key=OPENAI_API_KEY)
 
@@ -35,39 +87,96 @@ async def on_ready():
     print(f"Logged in as {client.user}")
 
 
-@client.tree.command(name="pitch", description="Find football pitch booking links")
+@client.tree.command(name="pitch", description="Find Powerleague football booking links")
 async def pitch(
     interaction: discord.Interaction,
     area: str,
-    date: str = "today",
+    date: str = "2026-05-09",
     time: str = "8pm",
+    pitch_type: str = "5-a-side Football",
 ):
     await interaction.response.defer()
 
-    powerleague_link = (
-        f"https://www.powerleague.com/booking/find-location?"
-        f"search_location={area}&territory_id=263&result_set=Pitch+search"
-        f"&search_disclaimer=Select+your+pitch&action=searchSites"
+    area_key = area.lower().strip().replace("’", "'")
+    venue = POWERLEAGUE_VENUES.get(area_key)
+
+    if venue is None:
+        available_venues = ", ".join(POWERLEAGUE_VENUES.keys())
+
+        london_search_link = (
+            "https://www.powerleague.com/booking/find-location"
+            "?search_location=London%2C+ENG%2C+United+Kingdom"
+            "&search_lat=51.5074456"
+            "&search_lng=-0.1277653"
+            f"&search_date={date}"
+            "&search_range="
+            "&territory_id=263"
+            "&result_set=Pitch+search"
+            "&search_sport="
+            "&search_size="
+            "&search_surface="
+            "&search_booking_modifier="
+            "&search_disclaimer=Select+your+pitch"
+            "&search_venue="
+            "&action=searchSites"
+        )
+
+        message = f"""
+⚽ **ZFind Powerleague Search**
+
+❌ I don't have a direct calendar for **{area}** yet.
+
+✅ Saved venues:
+{available_venues}
+
+🔗 London search:
+{london_search_link}
+"""
+        await interaction.followup.send(message[:1900])
+        return
+
+    if pitch_type not in venue["formats"]:
+        formats = "\n".join([f"• {f}" for f in venue["formats"]])
+
+        message = f"""
+⚽ **ZFind Powerleague Search**
+
+📍 Venue: **{venue['name']}**
+
+❌ **{pitch_type}** is not saved for this venue yet.
+
+Available formats:
+{formats}
+"""
+        await interaction.followup.send(message[:1900])
+        return
+
+    encoded_pitch_type = pitch_type.replace(" ", "%20")
+
+    booking_url = (
+        "https://www.powerleague.com/booking/select-time"
+        f"?search_booking_type_name={encoded_pitch_type}"
+        f"&search_location_id={venue['id']}"
+        f"&search_date={date}"
+        "&search_booking_modifier="
     )
 
     message = f"""
-⚽ **ZFind Pitch Search**
+⚽ **ZFind Live Booking**
 
-📍 Area: **{area}**
+📍 Venue: **{venue['name']}**
 📅 Date: **{date}**
-🕒 Time: **{time}**
+🕒 Requested Time: **{time}**
+🏟️ Format: **{pitch_type}**
 
-🏟️ **Powerleague**
-📡 Status: Booking page found
-🕒 Times: Open live calendar
-🔗 {powerleague_link}
+✅ Live booking calendar found
 
-⚠️ Live availability changes quickly. Check the booking page before travelling.
+🔗 {booking_url}
+
+⚠️ Availability changes quickly. Open the booking page to confirm the exact slot.
 """
 
     await interaction.followup.send(message[:1900])
-
-
 @client.tree.command(name="goals", description="Find Goals football centres")
 async def goals(interaction: discord.Interaction, area: str):
     await interaction.response.defer()
