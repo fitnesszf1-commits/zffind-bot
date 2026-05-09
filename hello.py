@@ -10,7 +10,6 @@ GAMES_CHANNEL_ID = 1502022033851158638
 
 ai = OpenAI(api_key=OPENAI_API_KEY)
 
-
 class ZFindBot(discord.Client):
     def __init__(self):
         intents = discord.Intents.default()
