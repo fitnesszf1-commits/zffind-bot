@@ -21,7 +21,6 @@ class ZFindBot(discord.Client):
         await self.tree.sync()
         print("Slash commands synced")
 
-
 client = ZFindBot()
 
 
