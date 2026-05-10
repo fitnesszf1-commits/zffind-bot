@@ -7,6 +7,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 
 GAMES_CHANNEL_ID = 1502022033851158638
+
 POWERLEAGUE_VENUES = {
     "shoreditch": {
         "name": "Powerleague Shoreditch",
@@ -62,6 +63,7 @@ POWERLEAGUE_VENUES = {
 
 ai = OpenAI(api_key=OPENAI_API_KEY)
 
+
 class ZFindBot(discord.Client):
     def __init__(self):
         intents = discord.Intents.default()
@@ -71,6 +73,7 @@ class ZFindBot(discord.Client):
     async def setup_hook(self):
         await self.tree.sync()
         print("Slash commands synced")
+
 
 client = ZFindBot()
 
@@ -121,34 +124,49 @@ async def pitch(
             "&action=searchSites"
         )
 
-        message = f"""
-⚽ **ZFind Powerleague Search**
+        embed = discord.Embed(
+            title="⚽ ZFind Powerleague Search",
+            description=f"❌ I don't have a direct calendar for **{area}** yet.",
+            color=0xFF5555,
+        )
 
-❌ I don't have a direct calendar for **{area}** yet.
+        embed.add_field(
+            name="✅ Saved Venues",
+            value=available_venues,
+            inline=False,
+        )
 
-✅ Saved venues:
-{available_venues}
+        embed.add_field(
+            name="🔗 London Search",
+            value=london_search_link,
+            inline=False,
+        )
 
-🔗 London search:
-{london_search_link}
-"""
-        await interaction.followup.send(message[:1900])
+        await interaction.followup.send(embed=embed)
         return
 
     if pitch_type not in venue["formats"]:
         formats = "\n".join([f"• {f}" for f in venue["formats"]])
 
-        message = f"""
-⚽ **ZFind Powerleague Search**
+        embed = discord.Embed(
+            title="⚽ ZFind Powerleague Search",
+            description=f"❌ **{pitch_type}** is not saved for this venue yet.",
+            color=0xFFAA00,
+        )
 
-📍 Venue: **{venue['name']}**
+        embed.add_field(
+            name="📍 Venue",
+            value=venue["name"],
+            inline=False,
+        )
 
-❌ **{pitch_type}** is not saved for this venue yet.
+        embed.add_field(
+            name="✅ Available Formats",
+            value=formats,
+            inline=False,
+        )
 
-Available formats:
-{formats}
-"""
-        await interaction.followup.send(message[:1900])
+        await interaction.followup.send(embed=embed)
         return
 
     encoded_pitch_type = pitch_type.replace(" ", "%20")
@@ -161,40 +179,38 @@ Available formats:
         "&search_booking_modifier="
     )
 
-    message = f"""
-⚽ **ZFind Live Booking**
+    embed = discord.Embed(
+        title="⚽ ZFind Live Booking",
+        color=0x00FF88,
+    )
 
-📍 Venue: **{venue['name']}**
-📅 Date: **{date}**
-🕒 Requested Time: **{time}**
-🏟️ Format: **{pitch_type}**
+    embed.add_field(name="📍 Venue", value=venue["name"], inline=False)
+    embed.add_field(name="📅 Date", value=date, inline=True)
+    embed.add_field(name="🕒 Requested Time", value=time, inline=True)
+    embed.add_field(name="🏟️ Format", value=pitch_type, inline=False)
+    embed.add_field(name="✅ Status", value="Live booking calendar found", inline=False)
+    embed.add_field(name="🔗 Booking Link", value=booking_url, inline=False)
+    embed.set_footer(text="Availability changes quickly. Open the booking page to confirm the exact slot.")
 
-✅ Live booking calendar found
+    await interaction.followup.send(embed=embed)
 
-🔗 {booking_url}
 
-⚠️ Availability changes quickly. Open the booking page to confirm the exact slot.
-"""
-
-    await interaction.followup.send(message[:1900])
 @client.tree.command(name="goals", description="Find Goals football centres")
 async def goals(interaction: discord.Interaction, area: str):
     await interaction.response.defer()
 
     link = f"https://www.goalsfootball.co.uk/centres?search={area}"
 
-    message = f"""
-⚽ **Goals Pitch Finder**
+    embed = discord.Embed(
+        title="⚽ Goals Pitch Finder",
+        color=0x00FF88,
+    )
 
-📍 Area: **{area}**
+    embed.add_field(name="📍 Area", value=area, inline=False)
+    embed.add_field(name="🔗 Search Link", value=link, inline=False)
+    embed.set_footer(text="Live availability changes quickly. Check the Goals booking page directly.")
 
-🔗 Search here:
-{link}
-
-⚠️ Live availability changes quickly. Check the Goals booking page directly.
-"""
-
-    await interaction.followup.send(message[:1900])
+    await interaction.followup.send(embed=embed)
 
 
 @client.tree.command(name="game", description="Post a football game needing players")
@@ -228,7 +244,11 @@ async def game(
         await interaction.followup.send("❌ Could not find games channel.")
         return
 
-    await channel.send(embed=embed)
+    game_message = await channel.send(embed=embed)
+
+    await game_message.add_reaction("⚽")
+    await game_message.add_reaction("🔥")
+
     await interaction.followup.send("✅ Game posted in 🔥｜games-tonight")
 
 
@@ -283,6 +303,21 @@ Format:
 
     except Exception as e:
         await interaction.followup.send(f"❌ Error:\n```{shorten_error(e)}```")
+
+
+@client.tree.command(name="venues", description="Show saved Powerleague venues")
+async def venues(interaction: discord.Interaction):
+    venue_list = "\n".join(
+        [f"• {venue['name']}" for venue in POWERLEAGUE_VENUES.values()]
+    )
+
+    embed = discord.Embed(
+        title="⚽ ZFind Saved Venues",
+        description=venue_list,
+        color=0x00FF88,
+    )
+
+    await interaction.response.send_message(embed=embed)
 
 
 client.run(DISCORD_TOKEN)
