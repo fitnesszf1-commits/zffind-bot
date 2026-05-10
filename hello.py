@@ -526,18 +526,16 @@ async def pitch(
         return
 
     results = find_nearest_pitches(location, clean_date, provider)
-busy_hint = ""
 
-hour = time.lower()
+    hour = time.lower()
 
-if "6" in hour or "7" in hour or "8" in hour:
-    busy_hint = "🔥 Peak football hours — pitches may book out quickly."
+    if "6" in hour or "7" in hour or "8" in hour:
+        busy_hint = "🔥 Peak football hours — pitches may book out quickly."
+    elif "9" in hour or "10" in hour:
+        busy_hint = "✅ Later evening slots are usually easier to find."
+    else:
+        busy_hint = "⚽ Availability varies depending on the venue and day."
 
-elif "9" in hour or "10" in hour:
-    busy_hint = "✅ Later evening slots are usually easier to find."
-
-else:
-    busy_hint = "⚽ Availability varies depending on the venue and day."
     embed = discord.Embed(
         title="⚽ Nearby Football Pitches",
         description=(
@@ -560,17 +558,17 @@ else:
             ),
             inline=False,
         )
-        embed.add_field(
-    name="📈 Booking Insight",
-    value=busy_hint,
-    inline=False,
-)
+
+    embed.add_field(
+        name="📈 Booking Insight",
+        value=busy_hint,
+        inline=False,
+    )
 
     embed.set_footer(text="Booking availability updates live on provider pages.")
 
     await interaction.followup.send(embed=embed)
-
-
+    
 @client.tree.command(name="game", description="Post a football game needing players")
 async def game(
     interaction: discord.Interaction,
