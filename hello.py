@@ -456,7 +456,45 @@ def find_nearest_pitches(location, date, provider="any"):
 @client.event
 async def on_ready():
     print(f"Logged in as {client.user}")
+@client.event
+async def on_raw_reaction_add(payload):
+    if payload.user_id == client.user.id:
+        return
 
+    if str(payload.emoji) != "⚽":
+        return
+
+    guild = client.get_guild(payload.guild_id)
+
+    if guild is None:
+        return
+
+    channel = guild.get_channel(payload.channel_id)
+
+    if channel is None:
+        return
+
+    try:
+        message = await channel.fetch_message(payload.message_id)
+
+        if not message.embeds:
+            return
+
+        embed = message.embeds[0]
+
+        if "GAME NEEDING PLAYERS" not in embed.title:
+            return
+
+        organiser_name = embed.footer.text.replace("Hosted by ", "")
+
+        user = guild.get_member(payload.user_id)
+
+        await channel.send(
+            f"⚽ {user.mention} wants to join this game."
+        )
+
+    except Exception as e:
+        print(e)
 
 @client.tree.command(name="pitch", description="Find local football pitches near any London area/postcode")
 async def pitch(
@@ -488,7 +526,18 @@ async def pitch(
         return
 
     results = find_nearest_pitches(location, clean_date, provider)
+busy_hint = ""
 
+hour = time.lower()
+
+if "6" in hour or "7" in hour or "8" in hour:
+    busy_hint = "🔥 Peak football hours — pitches may book out quickly."
+
+elif "9" in hour or "10" in hour:
+    busy_hint = "✅ Later evening slots are usually easier to find."
+
+else:
+    busy_hint = "⚽ Availability varies depending on the venue and day."
     embed = discord.Embed(
         title="⚽ Nearby Football Pitches",
         description=(
@@ -511,6 +560,11 @@ async def pitch(
             ),
             inline=False,
         )
+        embed.add_field(
+    name="📈 Booking Insight",
+    value=busy_hint,
+    inline=False,
+)
 
     embed.set_footer(text="Booking availability updates live on provider pages.")
 
@@ -540,12 +594,19 @@ async def game(
     embed.add_field(name="💷 Cost", value=f"£{cost}", inline=True)
     embed.add_field(name="🔥 Level", value=level, inline=True)
     embed.add_field(name="🏟️ Surface", value=surface, inline=True)
-    embed.set_footer(text=f"Posted by {interaction.user}")
+
+    embed.add_field(
+        name="✅ How To Join",
+        value="React with ⚽ below and the organiser will contact you.",
+        inline=False,
+    )
+
+    embed.set_footer(text=f"Hosted by {interaction.user}")
 
     channel = client.get_channel(GAMES_CHANNEL_ID)
 
     if channel is None:
-        await interaction.followup.send("❌ Could not find games channel.")
+        await interaction.followup.send("❌ Games channel not found.")
         return
 
     game_message = await channel.send(embed=embed)
@@ -553,7 +614,7 @@ async def game(
     await game_message.add_reaction("⚽")
     await game_message.add_reaction("🔥")
 
-    await interaction.followup.send("✅ Game posted in 🔥｜games-tonight")
+    await interaction.followup.send("✅ Game posted.")
 
 
 @client.tree.command(name="venues", description="Show saved football venues")
@@ -623,5 +684,33 @@ Format:
     except Exception as e:
         await interaction.followup.send(f"❌ Error:\n```{shorten_error(e)}```")
 
+@client.tree.command(name="games", description="Show recent football games")
+async def games(interaction: discord.Interaction):
+    await interaction.response.defer()
 
+    channel = client.get_channel(GAMES_CHANNEL_ID)
+
+    if channel is None:
+        await interaction.followup.send("❌ Games channel not found.")
+        return
+
+    messages = []
+
+    async for msg in channel.history(limit=10):
+        if msg.embeds:
+            embed = msg.embeds[0]
+
+            if "GAME NEEDING PLAYERS" in embed.title:
+                messages.append(embed)
+
+    if not messages:
+        await interaction.followup.send("❌ No active games found.")
+        return
+
+    await interaction.followup.send(
+        f"⚽ Found {len(messages)} recent games."
+    )
+
+    for embed in messages:
+        await interaction.channel.send(embed=embed)
 client.run(DISCORD_TOKEN)
