@@ -547,13 +547,11 @@ async def pitch(
             description=f"I couldn't understand **{area}** yet.",
             color=0xFFAA00,
         )
-
         embed.add_field(
             name="Try examples",
             value="w12, ladbroke grove, brixton, hackney, croydon, wembley, east london",
             inline=False,
         )
-
         await interaction.followup.send(embed=embed)
         return
 
@@ -566,36 +564,40 @@ async def pitch(
         status_text = "⚪ Live availability not checked"
 
         if venue["provider"].lower() == "powerleague":
-    try:
-        html = await scraper.fetch_page(venue["booking_url"])
-        slots = scraper.parse_powerleague_slots(html)
+            try:
+                html = await scraper.fetch_page(venue["booking_url"])
+                slots = scraper.parse_powerleague_slots(html)
 
-        # 1. Exact match
-        match = next(
-            (s for s in slots if s["time_norm"] == requested_norm),
-            None,
-        )
+                match = next(
+                    (s for s in slots if s.get("time_norm") == requested_norm),
+                    None,
+                )
 
-        # 2. Closest free slot
-        closest = find_closest_bookable_slot(slots, requested_norm)
+                closest = find_closest_bookable_slot(slots, requested_norm)
 
-        # Build status text
-        if match:
-            if match["status"] == "bookable":
-                status_text = "🟢 Bookable"
-            elif match["status"] == "not bookable":
-                status_text = "🔴 Not bookable"
-            else:
-                status_text = f"⚪ Status: {match['status']}"
-        else:
-            status_text = "⚪ No exact slot found"
+                if match:
+                    if match.get("status") == "bookable":
+                        status_text = "🟢 Requested time is bookable"
+                    elif match.get("status") == "not bookable":
+                        status_text = "🔴 Requested time is not bookable"
+                    else:
+                        status_text = f"⚪ Status: {match.get('status')}"
+                else:
+                    status_text = "⚪ Requested time not listed"
 
-        # Add closest free slot info
-        if closest:
-            status_text += f"\n➡️ **Closest free slot:** {closest['time']}"
+                if closest:
+                    status_text += f"\n✅ **Closest free slot:** {closest.get('time')}"
+                    status_text += "\n🧾 **Booking:** Open the provider page and select that time."
+                else:
+                    status_text += "\n❌ **Closest free slot:** None detected"
+                    status_text += "\n🧾 **Booking:** Open the provider page to double-check."
 
-    except Exception:
-        status_text = "⚪ Could not read live slots"
+            except Exception as e:
+                print(e)
+                status_text = (
+                    "⚪ Could not read live slots\n"
+                    "🧾 **Booking:** Open the provider page manually to check."
+                )
 
         availability_results.append((km, venue, status_text))
 
@@ -618,26 +620,29 @@ async def pitch(
     )
 
     for km, venue, status_text in availability_results:
-    embed.add_field(
-        name=f"{venue['provider']} — {venue['name']}",
-        value=f"""
-📍 **Area:** {venue['area']}
-📮 **Postcode:** {venue['postcode']}
-📊 **Availability:**  
-{status_text}
+        embed.add_field(
+            name=f"{venue['provider']} — {venue['name']}",
+            value=(
+                f"📍 **Area:** {venue['area']}\n"
+                f"📮 **Postcode:** {venue['postcode']}\n"
+                f"📊 **Availability:**\n{status_text}\n\n"
+                f"🏟️ **Formats:** {venue['formats']}\n"
+                f"📏 **Distance:** {km:.1f} km\n"
+                f"🕒 **Requested:** {time}\n"
+                f"🔗 [Open Booking Page]({venue['booking_url']})"
+            ),
+            inline=False,
+        )
 
-🏟️ **Formats:** {venue['formats']}
-📏 **Distance:** {km:.1f} km
-🕒 **Requested:** {time}
-🔗 [Open Booking Page]({venue['booking_url']})
-""",
+    embed.add_field(
+        name="📈 Booking Insight",
+        value=busy_hint,
         inline=False,
     )
 
     embed.set_footer(text="Booking availability updates live on provider pages.")
 
     await interaction.followup.send(embed=embed)
-
 
 @client.tree.command(name="game", description="Post a football game needing players")
 async def game(
