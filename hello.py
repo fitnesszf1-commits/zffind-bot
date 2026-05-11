@@ -3,12 +3,12 @@ import math
 import json
 import urllib.request
 import urllib.parse
-from scraper import PitchScraper
 from datetime import datetime, timedelta
 
 import discord
 from discord import app_commands
 from openai import OpenAI
+from scraper import PitchScraper
 
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -17,10 +17,10 @@ DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 GAMES_CHANNEL_ID = 1502022033851158638
 
 ai = OpenAI(api_key=OPENAI_API_KEY)
+scraper = PitchScraper()
 
 
 VENUES = [
-    # POWERLEAGUE
     {
         "name": "Powerleague Shepherd's Bush",
         "provider": "Powerleague",
@@ -111,8 +111,6 @@ VENUES = [
         "formats": "5-a-side / 7-a-side",
         "powerleague_id": "9a1b8d33-91e7-d88e-e211-0f5fe2796d5c",
     },
-
-    # GOALS
     {
         "name": "Goals Wembley",
         "provider": "Goals",
@@ -173,8 +171,6 @@ VENUES = [
         "formats": "5-a-side",
         "booking_url": "https://www.goalsfootball.co.uk/our-clubs/south-east/wimbledon",
     },
-
-    # BETTER / GLL
     {
         "name": "Better Market Road Football Pitches",
         "provider": "Better",
@@ -239,6 +235,7 @@ AREA_LOCATIONS = {
 class ZFindBot(discord.Client):
     def __init__(self):
         intents = discord.Intents.default()
+        intents.members = True
         super().__init__(intents=intents)
         self.tree = app_commands.CommandTree(self)
 
@@ -248,7 +245,7 @@ class ZFindBot(discord.Client):
 
 
 client = ZFindBot()
-scraper = PitchScraper()
+
 
 def normalise(text):
     return text.lower().strip().replace("’", "'")
@@ -276,7 +273,6 @@ def parse_date(date_text):
 def distance_km(lat1, lng1, lat2, lng2):
     radius = 6371
     lat1, lng1, lat2, lng2 = map(math.radians, [lat1, lng1, lat2, lng2])
-
     dlat = lat2 - lat1
     dlng = lng2 - lng1
 
@@ -313,6 +309,17 @@ def postcode_lookup(area):
     return None
 
 
+def simple_similarity(a, b):
+    a_words = set(a.replace("-", " ").split())
+    b_words = set(b.replace("-", " ").split())
+
+    if not a_words or not b_words:
+        return 0
+
+    overlap = len(a_words.intersection(b_words))
+    return overlap / max(len(a_words), len(b_words))
+
+
 def local_area_lookup(area):
     key = normalise(area)
 
@@ -325,7 +332,6 @@ def local_area_lookup(area):
             "source": "saved area",
         }
 
-    # Fuzzy spelling match
     best_key = None
     best_score = 0
 
@@ -345,17 +351,6 @@ def local_area_lookup(area):
         }
 
     return None
-
-
-def simple_similarity(a, b):
-    a_words = set(a.replace("-", " ").split())
-    b_words = set(b.replace("-", " ").split())
-
-    if not a_words or not b_words:
-        return 0
-
-    overlap = len(a_words.intersection(b_words))
-    return overlap / max(len(a_words), len(b_words))
 
 
 def ai_area_lookup(area):
@@ -411,11 +406,7 @@ Rules:
 
 
 def resolve_location(area):
-    return (
-        postcode_lookup(area)
-        or local_area_lookup(area)
-        or ai_area_lookup(area)
-    )
+    return postcode_lookup(area) or local_area_lookup(area) or ai_area_lookup(area)
 
 
 def make_booking_url(venue, date):
@@ -447,16 +438,41 @@ def find_nearest_pitches(location, date, provider="any"):
 
         venue_copy = dict(venue)
         venue_copy["booking_url"] = make_booking_url(venue, date)
-
         results.append((km, venue_copy))
 
     results.sort(key=lambda x: x[0])
     return results[:5]
 
 
+def normalise_user_time(t: str) -> str:
+    t = t.strip().lower()
+
+    if t.isdigit():
+        hour = int(t)
+        suffix = "am" if hour < 12 else "pm"
+        return f"{hour}:00{suffix}"
+
+    if t.endswith("am") or t.endswith("pm"):
+        hour = t[:-2]
+        if hour.isdigit():
+            return f"{hour}:00{t[-2:]}"
+
+    if ":" in t:
+        parts = t.split(":")
+        if len(parts) == 2 and parts[0].isdigit():
+            hour = int(parts[0])
+            suffix = "am" if hour < 12 else "pm"
+            hour12 = hour if hour <= 12 else hour - 12
+            return f"{hour12}:00{suffix}"
+
+    return t
+
+
 @client.event
 async def on_ready():
     print(f"Logged in as {client.user}")
+
+
 @client.event
 async def on_raw_reaction_add(payload):
     if payload.user_id == client.user.id:
@@ -466,12 +482,10 @@ async def on_raw_reaction_add(payload):
         return
 
     guild = client.get_guild(payload.guild_id)
-
     if guild is None:
         return
 
     channel = guild.get_channel(payload.channel_id)
-
     if channel is None:
         return
 
@@ -483,44 +497,17 @@ async def on_raw_reaction_add(payload):
 
         embed = message.embeds[0]
 
-        if "GAME NEEDING PLAYERS" not in embed.title:
+        if not embed.title or "GAME NEEDING PLAYERS" not in embed.title:
             return
-
-        organiser_name = embed.footer.text.replace("Hosted by ", "")
 
         user = guild.get_member(payload.user_id)
 
-        await channel.send(
-            f"⚽ {user.mention} wants to join this game."
-        )
+        if user:
+            await channel.send(f"⚽ {user.mention} wants to join this game.")
 
     except Exception as e:
         print(e)
-def normalise_user_time(t: str) -> str:
-    t = t.strip().lower()
 
-    # If user enters "8"
-    if t.isdigit():
-        hour = int(t)
-        suffix = "am" if hour < 12 else "pm"
-        return f"{hour}:00{suffix}"
-
-    # If user enters "8pm" or "8am"
-    if t.endswith("am") or t.endswith("pm"):
-        hour = t[:-2]
-        if hour.isdigit():
-            return f"{hour}:00{t[-2:]}"
-    
-    # If user enters "20:00"
-    if ":" in t:
-        parts = t.split(":")
-        if len(parts) == 2 and parts[0].isdigit():
-            hour = int(parts[0])
-            suffix = "am" if hour < 12 else "pm"
-            hour12 = hour if hour <= 12 else hour - 12
-            return f"{hour12}:00{suffix}"
-
-    return t
 
 @client.tree.command(name="pitch", description="Find local football pitches near any London area/postcode")
 async def pitch(
@@ -556,96 +543,78 @@ async def pitch(
     availability_results = []
     requested_norm = normalise_user_time(time).replace(" ", "")
 
-
     for km, venue in results:
-
         status_text = "⚪ Live availability not checked"
 
         if venue["provider"].lower() == "powerleague":
-
             try:
                 html = await scraper.fetch_page(venue["booking_url"])
-
                 slots = scraper.parse_powerleague_slots(html)
 
                 match = next(
-                    (
-                        s for s in slots
-                        if s["time_norm"] == requested_norm
-                    ),
+                    (s for s in slots if s.get("time_norm") == requested_norm),
                     None,
                 )
 
                 if match is None:
                     status_text = "⚪ No exact slot found"
-
+                elif match.get("status") == "bookable":
+                    status_text = "🟢 Bookable"
+                elif match.get("status") == "not bookable":
+                    status_text = "🔴 Not bookable"
                 else:
-
-                    if match["status"] == "bookable":
-                        status_text = "🟢 Bookable"
-
-                    elif match["status"] == "not bookable":
-                        status_text = "🔴 Not bookable"
-
-                    else:
-                        status_text = f"⚪ {match['status']}"
+                    status_text = f"⚪ {match.get('status')}"
 
             except Exception as e:
                 print(e)
                 status_text = "⚪ Could not read live slots"
 
-        availability_results.append(
-            (km, venue, status_text)
-        )
+        availability_results.append((km, venue, status_text))
 
     hour = time.lower()
 
     if "6" in hour or "7" in hour or "8" in hour:
         busy_hint = "🔥 Peak football hours — pitches may book out quickly."
-
     elif "9" in hour or "10" in hour:
         busy_hint = "✅ Later evening slots are usually easier to find."
-
     else:
         busy_hint = "⚽ Availability varies depending on the venue and day."
 
-embed = discord.Embed(
-    title="⚽ Nearby Football Pitches",
-    description=(
-        f"Closest pitches to **{location['name']}**\n"
-        f"🧠 Matched using: **{location['source']}**"
-    ),
-    color=0x00FF88,
-)
+    embed = discord.Embed(
+        title="⚽ Nearby Football Pitches",
+        description=(
+            f"Closest pitches to **{location['name']}**\n"
+            f"🧠 Matched using: **{location['source']}**"
+        ),
+        color=0x00FF88,
+    )
 
-for km, venue, status_text in availability_results:
+    for km, venue, status_text in availability_results:
+        embed.add_field(
+            name=f"{venue['provider']} — {venue['name']}",
+            value=(
+                f"📍 **Area:** {venue['area']}\n"
+                f"📮 **Postcode:** {venue['postcode']}\n"
+                f"📊 **Availability:** {status_text}\n"
+                f"🏟️ **Formats:** {venue['formats']}\n"
+                f"📏 **Distance:** {km:.1f} km\n"
+                f"🕒 **Requested:** {time}\n"
+                f"🔗 [Open Booking Page]({venue['booking_url']})"
+            ),
+            inline=False,
+        )
 
     embed.add_field(
-        name=f"{venue['provider']} — {venue['name']}",
-        value=(
-            f"📍 **Area:** {venue['area']}\n"
-            f"📮 **Postcode:** {venue['postcode']}\n"
-            f"📊 **Availability:** {status_text}\n"
-            f"🏟️ **Formats:** {venue['formats']}\n"
-            f"📏 **Distance:** {km:.1f} km\n"
-            f"🕒 **Requested:** {time}\n"
-            f"🔗 [Open Booking Page]({venue['booking_url']})"
-        ),
+        name="📈 Booking Insight",
+        value=busy_hint,
         inline=False,
     )
 
-embed.add_field(
-    name="📈 Booking Insight",
-    value=busy_hint,
-    inline=False,
-)
+    embed.set_footer(text="Booking availability updates live on provider pages.")
 
-embed.set_footer(
-    text="Booking availability updates live on provider pages."
-)
+    await interaction.followup.send(embed=embed)
 
-await interaction.followup.send(embed=embed)
-    
+
 @client.tree.command(name="game", description="Post a football game needing players")
 async def game(
     interaction: discord.Interaction,
@@ -669,7 +638,6 @@ async def game(
     embed.add_field(name="💷 Cost", value=f"£{cost}", inline=True)
     embed.add_field(name="🔥 Level", value=level, inline=True)
     embed.add_field(name="🏟️ Surface", value=surface, inline=True)
-
     embed.add_field(
         name="✅ How To Join",
         value="React with ⚽ below and the organiser will contact you.",
@@ -707,10 +675,7 @@ async def venues(interaction: discord.Interaction):
     await interaction.response.send_message(embed=embed)
 
 
-@client.tree.command(
-    name="freepitch",
-    description="Find free football cages and open-access pitches",
-)
+@client.tree.command(name="freepitch", description="Find free football cages and open-access pitches")
 async def freepitch(interaction: discord.Interaction, area: str):
     await interaction.response.defer()
 
@@ -759,6 +724,7 @@ Format:
     except Exception as e:
         await interaction.followup.send(f"❌ Error:\n```{shorten_error(e)}```")
 
+
 @client.tree.command(name="games", description="Show recent football games")
 async def games(interaction: discord.Interaction):
     await interaction.response.defer()
@@ -775,17 +741,17 @@ async def games(interaction: discord.Interaction):
         if msg.embeds:
             embed = msg.embeds[0]
 
-            if "GAME NEEDING PLAYERS" in embed.title:
+            if embed.title and "GAME NEEDING PLAYERS" in embed.title:
                 messages.append(embed)
 
     if not messages:
         await interaction.followup.send("❌ No active games found.")
         return
 
-    await interaction.followup.send(
-        f"⚽ Found {len(messages)} recent games."
-    )
+    await interaction.followup.send(f"⚽ Found {len(messages)} recent games.")
 
     for embed in messages:
         await interaction.channel.send(embed=embed)
+
+
 client.run(DISCORD_TOKEN)
