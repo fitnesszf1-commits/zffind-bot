@@ -17,8 +17,27 @@ DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 GAMES_CHANNEL_ID = 1502022033851158638
 
 ai = OpenAI(api_key=OPENAI_API_KEY)
-scraper = PitchScraper()
 
+scraper = PitchScraper()
+def find_closest_bookable_slot(slots, requested_norm):
+    """Return the closest bookable slot to the requested time."""
+    def to_dt(t):
+        return datetime.strptime(t.replace(" ", ""), "%I:%M%p")
+
+    try:
+        req_dt = to_dt(requested_norm)
+    except:
+        return None
+
+    bookable = [s for s in slots if s["status"] == "bookable"]
+
+    if not bookable:
+        return None
+
+    # Sort by time difference
+    bookable.sort(key=lambda s: abs(to_dt(s["time_norm"]) - req_dt))
+
+    return bookable[0]
 
 VENUES = [
     {
@@ -547,27 +566,36 @@ async def pitch(
         status_text = "⚪ Live availability not checked"
 
         if venue["provider"].lower() == "powerleague":
-            try:
-                html = await scraper.fetch_page(venue["booking_url"])
-                slots = scraper.parse_powerleague_slots(html)
+    try:
+        html = await scraper.fetch_page(venue["booking_url"])
+        slots = scraper.parse_powerleague_slots(html)
 
-                match = next(
-                    (s for s in slots if s.get("time_norm") == requested_norm),
-                    None,
-                )
+        # 1. Exact match
+        match = next(
+            (s for s in slots if s["time_norm"] == requested_norm),
+            None,
+        )
 
-                if match is None:
-                    status_text = "⚪ No exact slot found"
-                elif match.get("status") == "bookable":
-                    status_text = "🟢 Bookable"
-                elif match.get("status") == "not bookable":
-                    status_text = "🔴 Not bookable"
-                else:
-                    status_text = f"⚪ {match.get('status')}"
+        # 2. Closest free slot
+        closest = find_closest_bookable_slot(slots, requested_norm)
 
-            except Exception as e:
-                print(e)
-                status_text = "⚪ Could not read live slots"
+        # Build status text
+        if match:
+            if match["status"] == "bookable":
+                status_text = "🟢 Bookable"
+            elif match["status"] == "not bookable":
+                status_text = "🔴 Not bookable"
+            else:
+                status_text = f"⚪ Status: {match['status']}"
+        else:
+            status_text = "⚪ No exact slot found"
+
+        # Add closest free slot info
+        if closest:
+            status_text += f"\n➡️ **Closest free slot:** {closest['time']}"
+
+    except Exception:
+        status_text = "⚪ Could not read live slots"
 
         availability_results.append((km, venue, status_text))
 
@@ -590,23 +618,19 @@ async def pitch(
     )
 
     for km, venue, status_text in availability_results:
-        embed.add_field(
-            name=f"{venue['provider']} — {venue['name']}",
-            value=(
-                f"📍 **Area:** {venue['area']}\n"
-                f"📮 **Postcode:** {venue['postcode']}\n"
-                f"📊 **Availability:** {status_text}\n"
-                f"🏟️ **Formats:** {venue['formats']}\n"
-                f"📏 **Distance:** {km:.1f} km\n"
-                f"🕒 **Requested:** {time}\n"
-                f"🔗 [Open Booking Page]({venue['booking_url']})"
-            ),
-            inline=False,
-        )
-
     embed.add_field(
-        name="📈 Booking Insight",
-        value=busy_hint,
+        name=f"{venue['provider']} — {venue['name']}",
+        value=f"""
+📍 **Area:** {venue['area']}
+📮 **Postcode:** {venue['postcode']}
+📊 **Availability:**  
+{status_text}
+
+🏟️ **Formats:** {venue['formats']}
+📏 **Distance:** {km:.1f} km
+🕒 **Requested:** {time}
+🔗 [Open Booking Page]({venue['booking_url']})
+""",
         inline=False,
     )
 
