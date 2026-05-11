@@ -3,6 +3,7 @@ import math
 import json
 import urllib.request
 import urllib.parse
+from scraper import PitchScraper
 from datetime import datetime, timedelta
 
 import discord
