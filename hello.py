@@ -558,109 +558,100 @@ async def pitch(
 
     results = find_nearest_pitches(location, clean_date, provider)
 
-availability_results = []
-requested_norm = normalise_user_time(time).replace(" ", "")
+    availability_results = []
+    requested_norm = normalise_user_time(time).replace(" ", "")
 
-for km, venue in results:
-    status_text = "⚪ Live availability not checked"
+    for km, venue in results:
+        status_text = "⚪ Live availability not checked"
 
-    if venue["provider"].lower() == "powerleague":
-        try:
-            html = await scraper.fetch_page(venue["booking_url"])
-            slots = scraper.parse_powerleague_slots(html)
+        if venue["provider"].lower() == "powerleague":
+            try:
+                html = await scraper.fetch_page(venue["booking_url"])
+                slots = scraper.parse_powerleague_slots(html)
 
-            # Filter by correct date
-            slots = [s for s in slots if s.get("date") == clean_date]
+                slots = [
+                    s for s in slots
+                    if s.get("date") == clean_date
+                ]
 
-            # Exact match
-            match = next(
-                (s for s in slots if s["time_norm"] == requested_norm),
-                None,
-            )
+                match = next(
+                    (
+                        s for s in slots
+                        if s.get("time_norm") == requested_norm
+                    ),
+                    None,
+                )
 
-            # Closest free slot
-            closest = find_closest_bookable_slot(slots, requested_norm)
+                closest = find_closest_bookable_slot(slots, requested_norm)
 
-            # Build status text
-            if match:
-                if match["status"] == "bookable":
-                    status_text = "🟢 Bookable"
-                elif match["status"] == "not bookable":
-                    status_text = "🔴 Not bookable"
+                if match:
+                    if match.get("status") == "bookable":
+                        status_text = "🟢 Requested time is bookable"
+                    elif match.get("status") == "not bookable":
+                        status_text = "🔴 Requested time is not bookable"
+                    else:
+                        status_text = f"⚪ Status: {match.get('status')}"
                 else:
-                    status_text = f"⚪ Status: {match['status']}"
-            else:
-                status_text = "⚪ No exact slot found"
+                    status_text = "⚪ Requested time not listed"
 
-            # Add closest free slot
-            if closest:
-                status_text += f"\n➡️ **Closest free slot:** {closest['time']}"
+                if closest:
+                    status_text += f"\n➡️ **Closest free slot:** {closest.get('time')}"
+                    status_text += "\n🧾 **Booking:** Open the provider page and select that time."
+                else:
+                    status_text += "\n❌ **Closest free slot:** None detected"
+                    status_text += "\n🧾 **Booking:** Open the provider page to double-check."
 
-        except Exception:
-            status_text = "⚪ Could not read live slots"
+            except Exception as e:
+                print(e)
+                status_text = (
+                    "⚪ Could not read live slots\n"
+                    "🧾 **Booking:** Open the provider page manually to check."
+                )
 
-    availability_results.append((km, venue, status_text))
+        availability_results.append((km, venue, status_text))
 
+    hour = time.lower()
 
-# --------------------------
-# Busy hint (outside the loop)
-# --------------------------
-hour = time.lower()
+    if "6" in hour or "7" in hour or "8" in hour:
+        busy_hint = "🔥 Peak football hours — pitches may book out quickly."
+    elif "9" in hour or "10" in hour:
+        busy_hint = "✅ Later evening slots are usually easier to find."
+    else:
+        busy_hint = "⚽ Availability varies depending on the venue and day."
 
-if "6" in hour or "7" in hour or "8" in hour:
-    busy_hint = "🔥 Peak football hours — pitches may book out quickly."
-elif "9" in hour or "10" in hour:
-    busy_hint = "✅ Later evening slots are usually easier to find."
-else:
-    busy_hint = "⚽ Availability varies depending on the venue and day."
+    embed = discord.Embed(
+        title="⚽ Nearby Football Pitches",
+        description=(
+            f"Closest pitches to **{location['name']}**\n"
+            f"🧠 Matched using: **{location['source']}**"
+        ),
+        color=0x00FF88,
+    )
 
+    for km, venue, status_text in availability_results:
+        embed.add_field(
+            name=f"{venue['provider']} — {venue['name']}",
+            value=(
+                f"📍 **Area:** {venue['area']}\n"
+                f"📮 **Postcode:** {venue['postcode']}\n"
+                f"📊 **Availability:**\n{status_text}\n\n"
+                f"🏟️ **Formats:** {venue['formats']}\n"
+                f"📏 **Distance:** {km:.1f} km\n"
+                f"🕒 **Requested:** {time}\n"
+                f"🔗 [Open Booking Page]({venue['booking_url']})"
+            ),
+            inline=False,
+        )
 
-# --------------------------
-# Build embed ONCE
-# --------------------------
-embed = discord.Embed(
-    title="⚽ Nearby Football Pitches",
-    description=(
-        f"Closest pitches to **{location['name']}**\n"
-        f"🧠 Matched using: **{location['source']}**"
-    ),
-    color=0x00FF88,
-)
-
-
-# --------------------------
-# Add fields for each venue
-# --------------------------
-for km, venue, status_text in availability_results:
     embed.add_field(
-        name=f"{venue['provider']} — {venue['name']}",
-        value=f"""
-📍 **Area:** {venue['area']}
-📮 **Postcode:** {venue['postcode']}
-📊 **Availability:**  
-{status_text}
-
-🏟️ **Formats:** {venue['formats']}
-📏 **Distance:** {km:.1f} km
-🕒 **Requested:** {time}
-🔗 [Open Booking Page]({venue['booking_url']})
-""",
+        name="📈 Booking Insight",
+        value=busy_hint,
         inline=False,
     )
 
+    embed.set_footer(text="Booking availability updates live on provider pages.")
 
-# --------------------------
-# Add booking insight
-# --------------------------
-embed.add_field(
-    name="📈 Booking Insight",
-    value=busy_hint,
-    inline=False,
-)
-
-embed.set_footer(text="Booking availability updates live on provider pages.")
-
-await interaction.followup.send(embed=embed)
+    await interaction.followup.send(embed=embed)
 
 @client.tree.command(name="game", description="Post a football game needing players")
 async def game(
