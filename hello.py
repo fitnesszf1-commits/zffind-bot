@@ -527,42 +527,59 @@ async def pitch(
         return
 
     results = find_nearest_pitches(location, clean_date, provider)
-availability_results = []
-requested_norm = time.lower().replace(" ", "")
 
-for km, venue in results:
-    status_text = "⚪ Live availability not checked"
+    availability_results = []
+    requested_norm = time.lower().replace(" ", "")
 
-    if venue["provider"].lower() == "powerleague":
-        try:
-            html = await scraper.fetch_page(venue["booking_url"])
-            slots = scraper.parse_powerleague_slots(html)
+    for km, venue in results:
 
-            match = next(
-                (s for s in slots if s["time_norm"] == requested_norm),
-                None,
-            )
+        status_text = "⚪ Live availability not checked"
 
-            if match is None:
-                status_text = "⚪ No slot with that exact start time listed"
-            else:
-                if match["status"] == "bookable":
-                    status_text = "🟢 Bookable at this time"
-                elif match["status"] == "not bookable":
-                    status_text = "🔴 Not bookable at this time"
+        if venue["provider"].lower() == "powerleague":
+
+            try:
+                html = await scraper.fetch_page(venue["booking_url"])
+
+                slots = scraper.parse_powerleague_slots(html)
+
+                match = next(
+                    (
+                        s for s in slots
+                        if s["time_norm"] == requested_norm
+                    ),
+                    None,
+                )
+
+                if match is None:
+                    status_text = "⚪ No exact slot found"
+
                 else:
-                    status_text = f"⚪ Status: {match['status']}"
-        except Exception:
-            status_text = "⚪ Could not read live slots"
 
-    availability_results.append((km, venue, status_text))
+                    if match["status"] == "bookable":
+                        status_text = "🟢 Bookable"
+
+                    elif match["status"] == "not bookable":
+                        status_text = "🔴 Not bookable"
+
+                    else:
+                        status_text = f"⚪ {match['status']}"
+
+            except Exception as e:
+                print(e)
+                status_text = "⚪ Could not read live slots"
+
+        availability_results.append(
+            (km, venue, status_text)
+        )
 
     hour = time.lower()
 
     if "6" in hour or "7" in hour or "8" in hour:
         busy_hint = "🔥 Peak football hours — pitches may book out quickly."
+
     elif "9" in hour or "10" in hour:
         busy_hint = "✅ Later evening slots are usually easier to find."
+
     else:
         busy_hint = "⚽ Availability varies depending on the venue and day."
 
@@ -576,15 +593,16 @@ for km, venue in results:
     )
 
     for km, venue, status_text in availability_results:
+
         embed.add_field(
             name=f"{venue['provider']} — {venue['name']}",
             value=(
-                f"📍 **Area:** {venue['area']}\n"
-                f"📮 **Postcode:** {venue['postcode']}\n"
-                f"📊 **Availability:** {status_text}\n"
-                f"🏟️ **Formats:** {venue['formats']}\n"
-                f"📏 **Distance:** {km:.1f} km\n"
-                f"🕒 **Requested:** {time}\n"
+                f"📍 **Area:** {venue['area']}\\n"
+                f"📮 **Postcode:** {venue['postcode']}\\n"
+                f"📊 **Availability:** {status_text}\\n"
+                f"🏟️ **Formats:** {venue['formats']}\\n"
+                f"📏 **Distance:** {km:.1f} km\\n"
+                f"🕒 **Requested:** {time}\\n"
                 f"🔗 [Open Booking Page]({venue['booking_url']})"
             ),
             inline=False,
@@ -596,7 +614,9 @@ for km, venue in results:
         inline=False,
     )
 
-    embed.set_footer(text="Booking availability updates live on provider pages.")
+    embed.set_footer(
+        text="Booking availability updates live on provider pages."
+    )
 
     await interaction.followup.send(embed=embed)
     
