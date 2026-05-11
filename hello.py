@@ -247,7 +247,7 @@ class ZFindBot(discord.Client):
 
 
 client = ZFindBot()
-
+scraper = PitchScraper()
 
 def normalise(text):
     return text.lower().strip().replace("’", "'")
@@ -526,6 +526,35 @@ async def pitch(
         return
 
     results = find_nearest_pitches(location, clean_date, provider)
+availability_results = []
+requested_norm = time.lower().replace(" ", "")
+
+for km, venue in results:
+    status_text = "⚪ Live availability not checked"
+
+    if venue["provider"].lower() == "powerleague":
+        try:
+            html = await scraper.fetch_page(venue["booking_url"])
+            slots = scraper.parse_powerleague_slots(html)
+
+            match = next(
+                (s for s in slots if s["time_norm"] == requested_norm),
+                None,
+            )
+
+            if match is None:
+                status_text = "⚪ No slot with that exact start time listed"
+            else:
+                if match["status"] == "bookable":
+                    status_text = "🟢 Bookable at this time"
+                elif match["status"] == "not bookable":
+                    status_text = "🔴 Not bookable at this time"
+                else:
+                    status_text = f"⚪ Status: {match['status']}"
+        except Exception:
+            status_text = "⚪ Could not read live slots"
+
+    availability_results.append((km, venue, status_text))
 
     hour = time.lower()
 
@@ -545,12 +574,13 @@ async def pitch(
         color=0x00FF88,
     )
 
-    for km, venue in results:
+    for km, venue, status_text in availability_results:
         embed.add_field(
             name=f"{venue['provider']} — {venue['name']}",
             value=(
                 f"📍 **Area:** {venue['area']}\n"
                 f"📮 **Postcode:** {venue['postcode']}\n"
+                f"📊 **Availability:** {status_text}\n"
                 f"🏟️ **Formats:** {venue['formats']}\n"
                 f"📏 **Distance:** {km:.1f} km\n"
                 f"🕒 **Requested:** {time}\n"
