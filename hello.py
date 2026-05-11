@@ -616,9 +616,7 @@ async def pitch(
             f"🧠 Matched using: **{location['source']}**"
         ),
         color=0x00FF88,
-    )
-
-    for km, venue, status_text in availability_results:
+for km, venue, status_text in availability_results:
     embed.add_field(
         name=f"{venue['provider']} — {venue['name']}",
         value=f"""
