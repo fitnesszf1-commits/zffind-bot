@@ -496,6 +496,31 @@ async def on_raw_reaction_add(payload):
 
     except Exception as e:
         print(e)
+def normalise_user_time(t: str) -> str:
+    t = t.strip().lower()
+
+    # If user enters "8"
+    if t.isdigit():
+        hour = int(t)
+        suffix = "am" if hour < 12 else "pm"
+        return f"{hour}:00{suffix}"
+
+    # If user enters "8pm" or "8am"
+    if t.endswith("am") or t.endswith("pm"):
+        hour = t[:-2]
+        if hour.isdigit():
+            return f"{hour}:00{t[-2:]}"
+    
+    # If user enters "20:00"
+    if ":" in t:
+        parts = t.split(":")
+        if len(parts) == 2 and parts[0].isdigit():
+            hour = int(parts[0])
+            suffix = "am" if hour < 12 else "pm"
+            hour12 = hour if hour <= 12 else hour - 12
+            return f"{hour12}:00{suffix}"
+
+    return t
 
 @client.tree.command(name="pitch", description="Find local football pitches near any London area/postcode")
 async def pitch(
@@ -529,7 +554,8 @@ async def pitch(
     results = find_nearest_pitches(location, clean_date, provider)
 
     availability_results = []
-    requested_norm = time.lower().replace(" ", "")
+    requested_norm = normalise_user_time(time).replace(" ", "")
+
 
     for km, venue in results:
 
