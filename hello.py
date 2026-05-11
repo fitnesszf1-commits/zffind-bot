@@ -619,20 +619,20 @@ async def pitch(
     )
 
     for km, venue, status_text in availability_results:
+    embed.add_field(
+        name=f"{venue['provider']} — {venue['name']}",
+        value=f"""
+📍 **Area:** {venue['area']}
+📮 **Postcode:** {venue['postcode']}
+📊 **Availability:** {status_text}
+🏟️ **Formats:** {venue['formats']}
+📏 **Distance:** {km:.1f} km
+🕒 **Requested:** {time}
+🔗 [Open Booking Page]({venue['booking_url']})
+""",
+        inline=False,
+    )
 
-        embed.add_field(
-            name=f"{venue['provider']} — {venue['name']}",
-            value=(
-                f"📍 **Area:** {venue['area']}\\n"
-                f"📮 **Postcode:** {venue['postcode']}\\n"
-                f"📊 **Availability:** {status_text}\\n"
-                f"🏟️ **Formats:** {venue['formats']}\\n"
-                f"📏 **Distance:** {km:.1f} km\\n"
-                f"🕒 **Requested:** {time}\\n"
-                f"🔗 [Open Booking Page]({venue['booking_url']})"
-            ),
-            inline=False,
-        )
 
     embed.add_field(
         name="📈 Booking Insight",
