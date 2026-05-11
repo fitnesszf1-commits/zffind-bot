@@ -558,7 +558,7 @@ async def pitch(
 
     results = find_nearest_pitches(location, clean_date, provider)
 
-    availability_results = []
+availability_results = []
 requested_norm = normalise_user_time(time).replace(" ", "")
 
 for km, venue in results:
@@ -602,25 +602,36 @@ for km, venue in results:
     availability_results.append((km, venue, status_text))
 
 
-    hour = time.lower()
+# --------------------------
+# Busy hint (outside the loop)
+# --------------------------
+hour = time.lower()
 
-    if "6" in hour or "7" in hour or "8" in hour:
-        busy_hint = "🔥 Peak football hours — pitches may book out quickly."
-    elif "9" in hour or "10" in hour:
-        busy_hint = "✅ Later evening slots are usually easier to find."
-    else:
-        busy_hint = "⚽ Availability varies depending on the venue and day."
+if "6" in hour or "7" in hour or "8" in hour:
+    busy_hint = "🔥 Peak football hours — pitches may book out quickly."
+elif "9" in hour or "10" in hour:
+    busy_hint = "✅ Later evening slots are usually easier to find."
+else:
+    busy_hint = "⚽ Availability varies depending on the venue and day."
 
-    embed = discord.Embed(
-        title="⚽ Nearby Football Pitches",
-        description=(
-            f"Closest pitches to **{location['name']}**\n"
-            f"🧠 Matched using: **{location['source']}**"
-        ),
-        color=0x00FF88,
-    )
 
-    for km, venue, status_text in availability_results:
+# --------------------------
+# Build embed ONCE
+# --------------------------
+embed = discord.Embed(
+    title="⚽ Nearby Football Pitches",
+    description=(
+        f"Closest pitches to **{location['name']}**\n"
+        f"🧠 Matched using: **{location['source']}**"
+    ),
+    color=0x00FF88,
+)
+
+
+# --------------------------
+# Add fields for each venue
+# --------------------------
+for km, venue, status_text in availability_results:
     embed.add_field(
         name=f"{venue['provider']} — {venue['name']}",
         value=f"""
@@ -637,15 +648,19 @@ for km, venue in results:
         inline=False,
     )
 
-    embed.add_field(
-        name="📈 Booking Insight",
-        value=busy_hint,
-        inline=False,
-    )
 
-    embed.set_footer(text="Booking availability updates live on provider pages.")
+# --------------------------
+# Add booking insight
+# --------------------------
+embed.add_field(
+    name="📈 Booking Insight",
+    value=busy_hint,
+    inline=False,
+)
 
-    await interaction.followup.send(embed=embed)
+embed.set_footer(text="Booking availability updates live on provider pages.")
+
+await interaction.followup.send(embed=embed)
 
 @client.tree.command(name="game", description="Post a football game needing players")
 async def game(
