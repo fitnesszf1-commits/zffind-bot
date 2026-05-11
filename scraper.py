@@ -32,6 +32,9 @@ class PitchScraper:
             "Connection": "keep-alive",
         }
 
+    # -----------------------------
+    # Fetch page (Cloudflare bypass)
+    # -----------------------------
     def _fetch_sync(self, url: str) -> str:
         for attempt in range(1, self.max_retries + 1):
             try:
@@ -42,6 +45,7 @@ class PitchScraper:
                     continue
 
                 return resp.text
+
             except Exception:
                 time.sleep(random.uniform(2, 5))
 
@@ -53,16 +57,22 @@ class PitchScraper:
             html = await loop.run_in_executor(pool, self._fetch_sync, url)
         return html
 
+    # -----------------------------
+    # Parse Powerleague slots
+    # -----------------------------
     def parse_powerleague_slots(self, html: str) -> list[dict]:
         """
         Returns a list of slots:
         [
-          {"time": "9:40am", "status": "not bookable"},
-          {"time": "10:00am", "status": "bookable"},
+          {"time": "9:40am", "time_norm": "9:40am", "status": "bookable", "date": "2026-05-11"},
           ...
         ]
         """
         soup = BeautifulSoup(html, "html.parser")
+
+        # Extract the date for this column
+        day_column = soup.select_one(".calendar-column_slots")
+        date_str = day_column.get("data-day-column") if day_column else None
 
         # Time column
         time_cards = soup.select(
@@ -100,6 +110,7 @@ class PitchScraper:
                     "time": raw_time,
                     "time_norm": norm_time,
                     "status": status_text,
+                    "date": date_str,  # ⭐ FIX: ensures correct-day filtering
                 }
             )
 
