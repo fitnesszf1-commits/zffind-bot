@@ -21,6 +21,8 @@ ai = OpenAI(api_key=OPENAI_API_KEY)
 scraper = PitchScraper()
 def find_closest_bookable_slot(slots, requested_norm):
     """Return the closest bookable slot to the requested time."""
+    from datetime import datetime
+
     def to_dt(t):
         return datetime.strptime(t.replace(" ", ""), "%I:%M%p")
 
@@ -34,10 +36,9 @@ def find_closest_bookable_slot(slots, requested_norm):
     if not bookable:
         return None
 
-    # Sort by time difference
     bookable.sort(key=lambda s: abs(to_dt(s["time_norm"]) - req_dt))
-
     return bookable[0]
+
 
 VENUES = [
     {
@@ -558,48 +559,48 @@ async def pitch(
     results = find_nearest_pitches(location, clean_date, provider)
 
     availability_results = []
-    requested_norm = normalise_user_time(time).replace(" ", "")
+requested_norm = normalise_user_time(time).replace(" ", "")
 
-    for km, venue in results:
-        status_text = "⚪ Live availability not checked"
+for km, venue in results:
+    status_text = "⚪ Live availability not checked"
 
-        if venue["provider"].lower() == "powerleague":
-            try:
-                html = await scraper.fetch_page(venue["booking_url"])
-                slots = scraper.parse_powerleague_slots(html)
+    if venue["provider"].lower() == "powerleague":
+        try:
+            html = await scraper.fetch_page(venue["booking_url"])
+            slots = scraper.parse_powerleague_slots(html)
 
-                match = next(
-                    (s for s in slots if s.get("time_norm") == requested_norm),
-                    None,
-                )
+            # Filter by correct date
+            slots = [s for s in slots if s.get("date") == clean_date]
 
-                closest = find_closest_bookable_slot(slots, requested_norm)
+            # Exact match
+            match = next(
+                (s for s in slots if s["time_norm"] == requested_norm),
+                None,
+            )
 
-                if match:
-                    if match.get("status") == "bookable":
-                        status_text = "🟢 Requested time is bookable"
-                    elif match.get("status") == "not bookable":
-                        status_text = "🔴 Requested time is not bookable"
-                    else:
-                        status_text = f"⚪ Status: {match.get('status')}"
+            # Closest free slot
+            closest = find_closest_bookable_slot(slots, requested_norm)
+
+            # Build status text
+            if match:
+                if match["status"] == "bookable":
+                    status_text = "🟢 Bookable"
+                elif match["status"] == "not bookable":
+                    status_text = "🔴 Not bookable"
                 else:
-                    status_text = "⚪ Requested time not listed"
+                    status_text = f"⚪ Status: {match['status']}"
+            else:
+                status_text = "⚪ No exact slot found"
 
-                if closest:
-                    status_text += f"\n✅ **Closest free slot:** {closest.get('time')}"
-                    status_text += "\n🧾 **Booking:** Open the provider page and select that time."
-                else:
-                    status_text += "\n❌ **Closest free slot:** None detected"
-                    status_text += "\n🧾 **Booking:** Open the provider page to double-check."
+            # Add closest free slot
+            if closest:
+                status_text += f"\n➡️ **Closest free slot:** {closest['time']}"
 
-            except Exception as e:
-                print(e)
-                status_text = (
-                    "⚪ Could not read live slots\n"
-                    "🧾 **Booking:** Open the provider page manually to check."
-                )
+        except Exception:
+            status_text = "⚪ Could not read live slots"
 
-        availability_results.append((km, venue, status_text))
+    availability_results.append((km, venue, status_text))
+
 
     hour = time.lower()
 
@@ -620,19 +621,21 @@ async def pitch(
     )
 
     for km, venue, status_text in availability_results:
-        embed.add_field(
-            name=f"{venue['provider']} — {venue['name']}",
-            value=(
-                f"📍 **Area:** {venue['area']}\n"
-                f"📮 **Postcode:** {venue['postcode']}\n"
-                f"📊 **Availability:**\n{status_text}\n\n"
-                f"🏟️ **Formats:** {venue['formats']}\n"
-                f"📏 **Distance:** {km:.1f} km\n"
-                f"🕒 **Requested:** {time}\n"
-                f"🔗 [Open Booking Page]({venue['booking_url']})"
-            ),
-            inline=False,
-        )
+    embed.add_field(
+        name=f"{venue['provider']} — {venue['name']}",
+        value=f"""
+📍 **Area:** {venue['area']}
+📮 **Postcode:** {venue['postcode']}
+📊 **Availability:**  
+{status_text}
+
+🏟️ **Formats:** {venue['formats']}
+📏 **Distance:** {km:.1f} km
+🕒 **Requested:** {time}
+🔗 [Open Booking Page]({venue['booking_url']})
+""",
+        inline=False,
+    )
 
     embed.add_field(
         name="📈 Booking Insight",
