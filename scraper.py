@@ -115,3 +115,48 @@ class PitchScraper:
             )
 
         return slots
+def parse_goals_slots(self, html: str) -> list[dict]:
+    soup = BeautifulSoup(html, "html.parser")
+
+    slots = []
+
+    cards = soup.select(
+        "li[class*='booking-block-card-list-styles__ItemContainer']"
+    )
+
+    for card in cards:
+        text = card.get_text(" ", strip=True)
+        lower = text.lower()
+
+        # Try to find time
+        time_text = None
+
+        possible_times = card.find_all(string=True)
+
+        for t in possible_times:
+            clean = t.strip().lower()
+
+            if "am" in clean or "pm" in clean:
+                time_text = clean.replace(" ", "")
+                break
+
+        if not time_text:
+            continue
+
+        # Detect status
+        status = "unknown"
+
+        if "sold out" in lower:
+            status = "not bookable"
+
+        elif "£" in lower:
+            status = "bookable"
+
+        slots.append({
+            "time": time_text,
+            "time_norm": time_text,
+            "status": status,
+            "raw": text,
+        })
+
+    return slots
