@@ -46,192 +46,96 @@ VENUES = [
         "provider": "Powerleague",
         "area": "White City / Shepherd's Bush",
         "postcode": "W12",
-        "lat": 51.5067,
-        "lng": -0.2248,
+        "lat": 51.5067, "lng": -0.2248,
         "formats": "5-a-side",
         "powerleague_id": "ab9b7a16-b3fc-2b90-8214-69ba3020d23c",
     },
-    {"name": "Goals Eltham", "provider": "Goals", "site_id": "34", "lat": 51.4445, "lng": 0.0435},
-    {"name": "Goals Wembley", "provider": "Goals", "site_id": "26", "lat": 51.5411, "lng": -0.3014},
-    {"name": "Goals Gillette Corner", "provider": "Goals", "site_id": "33", "lat": 51.4851, "lng": -0.3278},
-    {"name": "Goals Heathrow", "provider": "Goals", "site_id": "21", "lat": 51.5015, "lng": -0.4285},
-    {"name": "Goals Chingford", "provider": "Goals", "site_id": "17", "lat": 51.6135, "lng": -0.0125},
-    {"name": "Goals Bexleyheath", "provider": "Goals", "site_id": "13", "lat": 51.4550, "lng": 0.1340},
-    {"name": "Goals Hayes", "provider": "Goals", "site_id": "20", "lat": 51.5127, "lng": -0.4135},
-    {"name": "Goals Sutton", "provider": "Goals", "site_id": "35", "lat": 51.3850, "lng": -0.2330},
-    {"name": "Goals Wimbledon", "provider": "Goals", "site_id": "10", "lat": 51.3934, "lng": -0.2356},
-    {"name": "Goals Beckenham", "provider": "Goals", "site_id": "12", "lat": 51.4025, "lng": -0.0145},
-    {"name": "Goals Dagenham", "provider": "Goals", "site_id": "18", "lat": 51.5475, "lng": 0.1550},
     {
-        "name": "Powerleague Shoreditch",
-        "provider": "Powerleague",
-        "area": "Shoreditch",
-        "postcode": "E1",
-        "lat": 51.5235,
-        "lng": -0.0755,
-        "formats": "5-a-side / 7-a-side",
-        "powerleague_id": "a20a54a1-3bdd-57b8-e211-6f44da11e82f",
-    },
-    {
-        "name": "Powerleague Southwark",
-        "provider": "Powerleague",
-        "area": "Southwark",
-        "postcode": "SE1",
-        "lat": 51.5035,
-        "lng": -0.0804,
+        "name": "Goals Wembley", 
+        "provider": "Goals", 
+        "site_id": "26", 
+        "area": "Wembley", 
+        "postcode": "HA9", 
+        "lat": 51.5588, "lng": -0.2796,
         "formats": "5-a-side",
-        "powerleague_id": "4f9d2f19-3d3c-11ef-943e-6045bd0f4951",
+        "booking_url": "https://www.goalsfootball.co.uk/our-clubs/london/wembley"
     },
     {
-        "name": "Powerleague Battersea",
-        "provider": "Powerleague",
-        "area": "Battersea",
-        "postcode": "SW11",
-        "lat": 51.4776,
-        "lng": -0.1481,
-        "formats": "5-a-side / 7-a-side",
-        "powerleague_id": "dcce87d1-c60a-d5a5-3814-3fa0b007c0b1",
-    },
-    {
-        "name": "Powerleague Vauxhall",
-        "provider": "Powerleague",
-        "area": "Vauxhall",
-        "postcode": "SW8",
-        "lat": 51.4862,
-        "lng": -0.1229,
-        "formats": "5-a-side / 7-a-side",
-        "powerleague_id": "e5bf4727-e258-bf85-ef13-714728d4ba74",
-    },
-    {
-        "name": "Powerleague Fairlop",
-        "provider": "Powerleague",
-        "area": "Fairlop",
-        "postcode": "IG6",
-        "lat": 51.5956,
-        "lng": 0.0912,
-        "formats": "5-a-side / 6-a-side / 7-a-side",
-        "powerleague_id": "cb58ea55-6dec-d1bd-e211-ee5818802d19",
-    },
-    {
-        "name": "Powerleague Barnet",
-        "provider": "Powerleague",
-        "area": "Barnet",
-        "postcode": "EN5",
-        "lat": 51.6529,
-        "lng": -0.1997,
-        "formats": "5-a-side / 7-a-side",
-        "powerleague_id": "f43ae0e2-58fb-11b8-e211-712e3ec94836",
-    },
-    {
-        "name": "Powerleague Romford",
-        "provider": "Powerleague",
-        "area": "Romford",
-        "postcode": "RM1",
-        "lat": 51.5758,
-        "lng": 0.1801,
-        "formats": "5-a-side / 7-a-side",
-        "powerleague_id": "a21f6d63-4043-a38a-8214-65baa0218977",
-    },
-    {
-        "name": "Powerleague Croydon",
-        "provider": "Powerleague",
-        "area": "Croydon",
-        "postcode": "CR0",
-        "lat": 51.3762,
-        "lng": -0.0982,
-        "formats": "5-a-side / 7-a-side",
-        "powerleague_id": "9a1b8d33-91e7-d88e-e211-0f5fe2796d5c",
-    },
-    {
-        "name": "Goals Wembley",
-        "provider": "Goals",
-        "area": "Wembley",
-        "postcode": "HA9",
-        "lat": 51.5588,
-        "lng": -0.2796,
+        "name": "Goals Eltham", 
+        "provider": "Goals", 
+        "site_id": "34", 
+        "area": "Eltham", 
+        "postcode": "SE9", 
+        "lat": 51.4513, "lng": 0.0542,
         "formats": "5-a-side",
-        "booking_url": "https://www.goalsfootball.co.uk/our-clubs/london/wembley",
+        "booking_url": "https://www.goalsfootball.co.uk/our-clubs/london/eltham"
     },
     {
-        "name": "Goals Southall",
-        "provider": "Goals",
-        "area": "Southall",
-        "postcode": "UB1",
-        "lat": 51.5111,
-        "lng": -0.3759,
+        "name": "Goals Wimbledon", 
+        "provider": "Goals", 
+        "site_id": "10", 
+        "area": "Wimbledon", 
+        "postcode": "SW19", 
+        "lat": 51.4214, "lng": -0.2064,
         "formats": "5-a-side",
-        "booking_url": "https://www.goalsfootball.co.uk/our-clubs/london/southall",
+        "booking_url": "https://www.goalsfootball.co.uk/our-clubs/south-east/wimbledon"
     },
     {
-        "name": "Goals Eltham",
-        "provider": "Goals",
-        "area": "Eltham",
-        "postcode": "SE9",
-        "lat": 51.4513,
-        "lng": 0.0542,
+        "name": "Goals Beckenham", 
+        "provider": "Goals", 
+        "site_id": "12", 
+        "area": "Beckenham", 
+        "postcode": "BR3", 
+        "lat": 51.4088, "lng": -0.0253,
         "formats": "5-a-side",
-        "booking_url": "https://www.goalsfootball.co.uk/our-clubs/london/eltham",
+        "booking_url": "https://www.goalsfootball.co.uk/our-clubs/london/beckenham"
     },
     {
-        "name": "Goals Beckenham",
-        "provider": "Goals",
-        "area": "Beckenham",
-        "postcode": "BR3",
-        "lat": 51.4088,
-        "lng": -0.0253,
+        "name": "Goals Chingford", 
+        "provider": "Goals", 
+        "site_id": "17", 
+        "area": "Chingford", 
+        "postcode": "E4", 
+        "lat": 51.6303, "lng": 0.0007,
         "formats": "5-a-side",
-        "booking_url": "https://www.goalsfootball.co.uk/our-clubs/london/beckenham",
+        "booking_url": "https://www.goalsfootball.co.uk/our-clubs/london/chingford"
     },
     {
-        "name": "Goals Chingford",
-        "provider": "Goals",
-        "area": "Chingford",
-        "postcode": "E4",
-        "lat": 51.6303,
-        "lng": 0.0007,
-        "formats": "5-a-side",
-        "booking_url": "https://www.goalsfootball.co.uk/our-clubs/london/chingford",
+        "name": "Goals Gillette Corner", "provider": "Goals", "site_id": "33", "area": "Isleworth", "postcode": "TW7", "lat": 51.4851, "lng": -0.3278, "formats": "5-a-side"
     },
     {
-        "name": "Goals Wimbledon",
-        "provider": "Goals",
-        "area": "Wimbledon",
-        "postcode": "SW19",
-        "lat": 51.4214,
-        "lng": -0.2064,
-        "formats": "5-a-side",
-        "booking_url": "https://www.goalsfootball.co.uk/our-clubs/south-east/wimbledon",
+        "name": "Goals Heathrow", "provider": "Goals", "site_id": "21", "area": "Heathrow", "postcode": "UB3", "lat": 51.5015, "lng": -0.4285, "formats": "5-a-side"
     },
     {
-        "name": "Better Market Road Football Pitches",
-        "provider": "Better",
-        "area": "Islington / Caledonian Road",
-        "postcode": "N7",
-        "lat": 51.5476,
-        "lng": -0.1162,
-        "formats": "5-a-side / 7-a-side / 11-a-side",
-        "booking_url": "https://www.better.org.uk/leisure-centre/london/islington/marketroad/football",
+        "name": "Goals Bexleyheath", "provider": "Goals", "site_id": "13", "area": "Bexley", "postcode": "DA7", "lat": 51.4550, "lng": 0.1340, "formats": "5-a-side"
     },
     {
-        "name": "Better Hackney Football Pitches",
-        "provider": "Better",
-        "area": "Hackney",
-        "postcode": "E8",
-        "lat": 51.5450,
-        "lng": -0.0553,
-        "formats": "5-a-side / 7-a-side / 11-a-side",
-        "booking_url": "https://www.better.org.uk/leisure-centre/london/hackney/football",
+        "name": "Goals Hayes", "provider": "Goals", "site_id": "20", "area": "Hayes", "postcode": "UB3", "lat": 51.5127, "lng": -0.4135, "formats": "5-a-side"
     },
     {
-        "name": "Better Greenwich Football Pitches",
-        "provider": "Better",
-        "area": "Greenwich",
-        "postcode": "SE10",
-        "lat": 51.4826,
-        "lng": -0.0077,
-        "formats": "5-a-side / 7-a-side / 11-a-side",
-        "booking_url": "https://www.better.org.uk/leisure-centre/london/greenwich/football",
+        "name": "Goals Sutton", "provider": "Goals", "site_id": "35", "area": "Sutton", "postcode": "SM3", "lat": 51.3850, "lng": -0.2330, "formats": "5-a-side"
     },
+    {
+        "name": "Goals Dagenham", "provider": "Goals", "site_id": "18", "area": "Dagenham", "postcode": "RM10", "lat": 51.5475, "lng": 0.1550, "formats": "5-a-side"
+    },
+    {
+        "name": "Goals Southall", "provider": "Goals", "site_id": "22", "area": "Southall", "postcode": "UB1", "lat": 51.5111, "lng": -0.3759, "formats": "5-a-side"
+    },
+    {
+        "name": "Powerleague Shoreditch", "provider": "Powerleague", "area": "Shoreditch", "postcode": "E1", "lat": 51.5235, "lng": -0.0755, "formats": "5-a-side / 7-a-side", "powerleague_id": "a20a54a1-3bdd-57b8-e211-6f44da11e82f"
+    },
+    {
+        "name": "Powerleague Southwark", "provider": "Powerleague", "area": "Southwark", "postcode": "SE1", "lat": 51.5035, "lng": -0.0804, "formats": "5-a-side", "powerleague_id": "4f9d2f19-3d3c-11ef-943e-6045bd0f4951"
+    },
+    {
+        "name": "Powerleague Battersea", "provider": "Powerleague", "area": "Battersea", "postcode": "SW11", "lat": 51.4776, "lng": -0.1481, "formats": "5-a-side / 7-a-side", "powerleague_id": "dcce87d1-c60a-d5a5-3814-3fa0b007c0b1"
+    },
+    {
+        "name": "Powerleague Vauxhall", "provider": "Powerleague", "area": "Vauxhall", "postcode": "SW8", "lat": 51.4862, "lng": -0.1229, "formats": "5-a-side / 7-a-side", "powerleague_id": "e5bf4727-e258-bf85-ef13-714728d4ba74"
+    },
+    {
+        "name": "Better Market Road", "provider": "Better", "area": "Islington", "postcode": "N7", "lat": 51.5476, "lng": -0.1162, "formats": "5/7/11-a-side", "booking_url": "https://www.better.org.uk/leisure-centre/london/islington/marketroad/football"
+    }
 ]
 
 
@@ -291,14 +195,23 @@ def shorten_error(e):
 
 def parse_date(date_text):
     value = normalise(date_text)
+    now = datetime.now()
 
     if value == "today":
-        return datetime.now().strftime("%Y-%m-%d")
-
+        return now.strftime("%Y-%m-%d")
     if value == "tomorrow":
-        return (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+        return (now + timedelta(days=1)).strftime("%Y-%m-%d")
+    
+    # If user types "Friday", find the next Friday
+    days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    if value in days:
+        target_day = days.index(value)
+        current_day = now.weekday()
+        days_ahead = target_day - current_day
+        if days_ahead <= 0: days_ahead += 7
+        return (now + timedelta(days=days_ahead)).strftime("%Y-%m-%d")
 
-    return date_text
+    return date_text # Ensure this is YYYY-MM-DD
 
 
 def distance_km(lat1, lng1, lat2, lng2):
@@ -441,15 +354,11 @@ def resolve_location(area):
 
 
 def make_booking_url(venue, date):
-    if venue["provider"] == "Powerleague":
-        return (
-            "https://www.powerleague.com/booking/select-time"
-            "?search_booking_type_name=5-a-side%20Football"
-            f"&search_location_id={venue['powerleague_id']}"
-            f"&search_date={date}"
-            "&search_booking_modifier="
-        )
-
+    if venue.get("provider") == "Powerleague":
+        pid = venue.get("powerleague_id")
+        # Ensure date is YYYY-MM-DD
+        return f"https://www.powerleague.com/booking/select-time?search_booking_type_name=5-a-side%20Football&search_location_id={pid}&search_date={date}&search_booking_modifier="
+    
     return venue.get("booking_url", "https://www.goalsfootball.co.uk/play/book-a-game")
 
 
