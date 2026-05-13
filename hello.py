@@ -450,7 +450,7 @@ def make_booking_url(venue, date):
             "&search_booking_modifier="
         )
 
-    return venue["booking_url"]
+    return venue.get("booking_url", "https://www.goalsfootball.co.uk/play/book-a-game")
 
 
 def find_nearest_pitches(location, date, provider="any"):
