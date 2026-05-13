@@ -635,13 +635,13 @@ async def pitch(
         embed.add_field(
             name=f"{venue['provider']} — {venue['name']}",
             value=(
-                f"📍 **Area:** {venue['area']}\n"
-                f"📮 **Postcode:** {venue['postcode']}\n"
+                f"📍 **Area:** {venue.get('area', 'London')}\n" # <--- Use .get here
+                f"📮 **Postcode:** {venue.get('postcode', 'N/A')}\n" # <--- And here just in case
                 f"📊 **Availability:**\n{status_text}\n\n"
-                f"🏟️ **Formats:** {venue['formats']}\n"
+                f"🏟️ **Formats:** {venue.get('formats', '5-a-side')}\n" # <--- And here
                 f"📏 **Distance:** {km:.1f} km\n"
                 f"🕒 **Requested:** {time}\n"
-                f"🔗 [Open Booking Page]({venue['booking_url']})"
+                f"🔗 [Open Booking Page]({venue.get('booking_url', 'https://www.goalsfootball.co.uk')})"
             ),
             inline=False,
         )
