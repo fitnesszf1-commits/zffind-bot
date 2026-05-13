@@ -564,17 +564,21 @@ async def pitch(
     for km, venue in results:
         status_text = "⚪ Live availability not checked"
 
-        if venue["provider"].lower() == "powerleague":
-            try:
-                html = await scraper.fetch_page(venue["booking_url"])
-                slots = scraper.parse_powerleague_slots(html)
-
-                slots = [
-                    s for s in slots
-                    if s.get("date") == clean_date
-                ]
-
-                match = next(
+        provider_name = venue["provider"].lower()
+        
+        if provider_name == "powerleague":
+            html = await scraper.fetch_page(venue["booking_url"])
+            slots = scraper.parse_powerleague_slots(html)
+        
+        elif provider_name == "goals":
+            html = await scraper.fetch_page(venue["booking_url"])
+            slots = scraper.parse_goals_slots(html)
+        
+        else:
+        
+            slots = []
+            
+        match = next(
                     (
                         s for s in slots
                         if s.get("time_norm") == requested_norm
