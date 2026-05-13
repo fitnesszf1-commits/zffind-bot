@@ -564,21 +564,24 @@ async def pitch(
     for km, venue in results:
         status_text = "⚪ Live availability not checked"
 
-        provider_name = venue["provider"].lower()
-        
-        if provider_name == "powerleague":
-            html = await scraper.fetch_page(venue["booking_url"])
-            slots = scraper.parse_powerleague_slots(html)
-        
-        elif provider_name == "goals":
-            html = await scraper.fetch_page(venue["booking_url"])
-            slots = scraper.parse_goals_slots(html)
-        
-        else:
-        
+        try:
+            provider_name = venue["provider"].lower()
             slots = []
-            
-        match = next(
+
+            if provider_name == "powerleague":
+                html = await scraper.fetch_page(venue["booking_url"])
+                slots = scraper.parse_powerleague_slots(html)
+                slots = [s for s in slots if s.get("date") == clean_date]
+
+            elif provider_name == "goals":
+                html = await scraper.fetch_page(venue["booking_url"])
+                slots = scraper.parse_goals_slots(html)
+
+            else:
+                slots = []
+
+            if slots:
+                match = next(
                     (
                         s for s in slots
                         if s.get("time_norm") == requested_norm
@@ -605,12 +608,18 @@ async def pitch(
                     status_text += "\n❌ **Closest free slot:** None detected"
                     status_text += "\n🧾 **Booking:** Open the provider page to double-check."
 
-            except Exception as e:
-                print(e)
+            else:
                 status_text = (
-                    "⚪ Could not read live slots\n"
+                    "⚪ Live availability not checked\n"
                     "🧾 **Booking:** Open the provider page manually to check."
                 )
+
+        except Exception as e:
+            print(e)
+            status_text = (
+                "⚪ Could not read live slots\n"
+                "🧾 **Booking:** Open the provider page manually to check."
+            )
 
         availability_results.append((km, venue, status_text))
 
