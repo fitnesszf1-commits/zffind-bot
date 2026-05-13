@@ -50,7 +50,7 @@ VENUES = [
         "lng": -0.2248,
         "formats": "5-a-side",
         "powerleague_id": "ab9b7a16-b3fc-2b90-8214-69ba3020d23c",
-    }
+    },
     {"name": "Goals Eltham", "provider": "Goals", "site_id": "34", "lat": 51.4445, "lng": 0.0435},
     {"name": "Goals Wembley", "provider": "Goals", "site_id": "26", "lat": 51.5411, "lng": -0.3014},
     {"name": "Goals Gillette Corner", "provider": "Goals", "site_id": "33", "lat": 51.4851, "lng": -0.3278},
@@ -570,70 +570,49 @@ async def pitch(
     results = find_nearest_pitches(location, clean_date, provider)
 
     availability_results = []
-    requested_norm = normalise_user_time(time).replace(" ", "")
-
     for km, venue in results:
         status_text = "⚪ Live availability not checked"
-
+        
         try:
             provider_name = venue["provider"].lower()
             slots = []
 
             if provider_name == "powerleague":
+                # Powerleague uses the HTML Scraper
                 html = await scraper.fetch_page(venue["booking_url"])
                 slots = scraper.parse_powerleague_slots(html)
+                # Filter slots to ensure they match the date requested
                 slots = [s for s in slots if s.get("date") == clean_date]
 
             elif provider_name == "goals":
-                html = await scraper.fetch_page(venue["booking_url"])
-                slots = scraper.parse_goals_slots(html)
+                # Goals uses the NEW API Scraper method
+                # This is much faster and more reliable
+                slots = await scraper.fetch_goals_availability(venue["site_id"], clean_date)
 
-            else:
-                slots = []
-
+            # Process the slots we found
             if slots:
-                match = next(
-                    (
-                        s for s in slots
-                        if s.get("time_norm") == requested_norm
-                    ),
-                    None,
-                )
-
+                match = next((s for s in slots if s.get("time_norm") == requested_norm), None)
                 closest = find_closest_bookable_slot(slots, requested_norm)
 
                 if match:
                     if match.get("status") == "bookable":
                         status_text = "🟢 Requested time is bookable"
-                    elif match.get("status") == "not bookable":
-                        status_text = "🔴 Requested time is not bookable"
                     else:
-                        status_text = f"⚪ Status: {match.get('status')}"
+                        status_text = "🔴 Requested time is not bookable"
                 else:
                     status_text = "⚪ Requested time not listed"
 
                 if closest:
-                    status_text += f"\n➡️ **Closest free slot:** {closest.get('time')}"
-                    status_text += "\n🧾 **Booking:** Open the provider page and select that time."
-                else:
-                    status_text += "\n❌ **Closest free slot:** None detected"
-                    status_text += "\n🧾 **Booking:** Open the provider page to double-check."
-
+                    status_text += f"\n➡️ **Closest free:** {closest.get('time')}"
             else:
-                status_text = (
-                    "⚪ Live availability not checked\n"
-                    "🧾 **Booking:** Open the provider page manually to check."
-                )
+                status_text = "⚪ No slots found for this date."
 
         except Exception as e:
-            print(e)
-            status_text = (
-                "⚪ Could not read live slots\n"
-                "🧾 **Booking:** Open the provider page manually to check."
-            )
+            print(f"Error checking {venue['name']}: {e}")
+            status_text = "⚪ Could not read live slots"
 
         availability_results.append((km, venue, status_text))
-
+        
     hour = time.lower()
 
     if "6" in hour or "7" in hour or "8" in hour:
